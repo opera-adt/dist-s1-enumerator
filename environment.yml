@@ -1,0 +1,22 @@
+name: dist-s1-enumerator
+dependencies:
+ - python>=3.12
+ - pip
+ - asf_search
+ - flake8
+ - flake8-blind-except
+ - flake8-builtins
+ - flake8-import-order
+ - geopandas
+ - contextily
+ - jupyterlab
+ - matplotlib
+ - numpy
+ - pandas
+ - pyarrow
+ - pytest
+ - pytest-cov
+ - rasterio
+ - ruff
+ - shapely
+ - pandas
