@@ -63,8 +63,10 @@ def get_burst_table_from_mgrs_tiles(mgrs_tile_ids: str | list[str]) -> list:
     df_mgrs_burst_luts = get_lut_by_mgrs_tile_ids(mgrs_tile_ids)
     burst_ids = df_mgrs_burst_luts.jpl_burst_id.unique().tolist()
     df_burst = get_burst_table(burst_ids)
-    df_burst = pd.merge(df_burst,
-                        df_mgrs_burst_luts[['jpl_burst_id', 'acq_group_id_within_mgrs_tile', 'mgrs_tile_id']],
-                        how='left',
-                        on='jpl_burst_id')
+    df_burst = pd.merge(
+        df_burst,
+        df_mgrs_burst_luts[['jpl_burst_id', 'acq_group_id_within_mgrs_tile', 'mgrs_tile_id']],
+        how='left',
+        on='jpl_burst_id',
+    )
     return df_burst
