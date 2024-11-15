@@ -3,6 +3,7 @@ dependencies:
  - python>=3.12
  - pip
  - asf_search
+ - backoff
  - flake8
  - flake8-blind-except
  - flake8-builtins
@@ -17,6 +18,8 @@ dependencies:
  - pytest
  - pytest-cov
  - rasterio
+ - requests
  - ruff
  - shapely
  - pandas
+ - tqdm

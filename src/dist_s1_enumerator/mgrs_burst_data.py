@@ -47,7 +47,7 @@ def get_mgrs_table() -> gpd.GeoDataFrame:
     return df_mgrs
 
 
-def get_mgrs_tile_overlapping_geometry(geometry: Polygon | Point) -> gpd.GeoDataFrame:
+def get_mgrs_tiles_overlapping_geometry(geometry: Polygon | Point) -> gpd.GeoDataFrame:
     df_mgrs = get_mgrs_table()
     df_mgrs_overlapping = df_mgrs[df_mgrs.intersects(geometry)].reset_index(drop=True)
     return df_mgrs_overlapping

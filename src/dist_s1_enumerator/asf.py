@@ -8,15 +8,26 @@ from rasterio.crs import CRS
 from shapely.geometry import shape
 
 
-def get_asf_rtc_burst_metadata(
+def get_asf_rtc_s1_metadata_for_fixed_track(
     burst_ids: str | list[str],
     earliest_acceptable_acq_dt: str | datetime = None,
     latest_acceptable_acq_dt: str | datetime = None,
 ) -> gpd.GeoDataFrame:
+    """
+    Get ASF RTC burst metadata for a fixed track. The track number is extracted from the burst_ids.
+    """
     if isinstance(burst_ids, str):
         burst_ids = [burst_ids]
     # make sure JPL syntax is transformed to asf syntax
     burst_ids = [burst_id.upper().replace('-', '_') for burst_id in burst_ids]
+
+    # Ensure there is at most one track number or 2 sequential tracks
+    unique_tracks = list(set([int(b_id.split('_')[0][1:]) for b_id in burst_ids]))
+    unique_tracks_str = ', '.join(map(str, unique_tracks))
+    if len(unique_tracks) > 2:
+        raise ValueError(f'More than 2 unique track numbers found: {unique_tracks_str}')
+    if len(unique_tracks) == 2 and unique_tracks[0] + 1 != unique_tracks[1]:
+        raise ValueError(f'Non-sequential track numbers found for tracks {unique_tracks_str}.')
 
     resp = asf.search(
         operaBurstID=burst_ids,
@@ -54,7 +65,15 @@ def get_asf_rtc_burst_metadata(
     df_rtc = df_rtc.drop_duplicates(subset=['dedup_id']).reset_index(drop=True)
     df_rtc = df_rtc.drop(columns=['dedup_id'])
 
-    df_rtc['acq_date'] = df_rtc['acq_dt'].dt.date.astype(str)
+    # Group by acquisition time to ensure that the acquisition date is grouped by date of earliest time in pass
+    # We deal with midnight crossing by shifting the time by 10 minutes
+    midnight_crossing = (df_rtc['acq_dt'].dt.hour == 0).any() & (df_rtc['acq_dt'].dt.hour == 23).any()
+    time_offset = pd.Timedelta('10 minutes')
+    if midnight_crossing:
+        df_rtc['acq_date'] = (df_rtc['acq_dt'] - time_offset * (df_rtc['acq_dt'].dt.hour == 0)).dt.date.astype(str)
+    else:
+        df_rtc['acq_date'] = df_rtc['acq_dt'].dt.date.astype(str)
+
     df_rtc = df_rtc[
         [
             'opera_id',
@@ -71,7 +90,7 @@ def get_asf_rtc_burst_metadata(
     return df_rtc
 
 
-def get_most_recent_img_metadata_in_date_range(
+def get_most_recent_rtc_s1_metadata_in_date_range_and_fixed_track(
     burst_ids: list[str],
     earliest_acceptable_acq_dt: datetime,
     latest_acceptable_acq_dt: datetime,
@@ -109,7 +128,7 @@ def get_most_recent_img_metadata_in_date_range(
             'different dates for the burst_ids provided.',
             category=UserWarning,
         )
-    df_rtc = get_asf_rtc_burst_metadata(
+    df_rtc = get_asf_rtc_s1_metadata_for_fixed_track(
         burst_ids,
         earliest_acceptable_acq_dt=earliest_acceptable_acq_dt,
         latest_acceptable_acq_dt=latest_acceptable_acq_dt,
