@@ -72,4 +72,7 @@ def localize_rtc_s1_ts(
     # _ = list(tqdm(map(localize_one_rtc_p, zip(urls, out_paths)), total=len(urls), disable=disable_tqdm))
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         _ = list(tqdm(executor.map(localize_one_rtc_p, zip(urls, out_paths)), total=len(urls), disable=disable_tqdm))
+    # For serliaziation
+    df_out['loc_path_vv'] = df_out['loc_path_vv'].astype(str)
+    df_out['loc_path_vh'] = df_out['loc_path_vh'].astype(str)
     return df_out
