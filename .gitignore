@@ -92,3 +92,6 @@ __pycache__/
 
 # Data directory
 **/out/
+
+# Notebooks
+notebooks/*.parquet

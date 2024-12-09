@@ -90,7 +90,7 @@ def get_asf_rtc_s1_metadata_for_fixed_track(
     return df_rtc
 
 
-def get_most_recent_rtc_s1_metadata_in_date_range_and_fixed_track(
+def get_rtc_s1_ts_metadata(
     burst_ids: list[str],
     earliest_acceptable_acq_dt: datetime,
     latest_acceptable_acq_dt: datetime,
