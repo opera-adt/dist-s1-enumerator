@@ -1,7 +1,10 @@
 import warnings
 from importlib.metadata import PackageNotFoundError, version
 
-from .asf import agg_rtc_metadata_by_burst_id, get_asf_rtc_burst_metadata, get_most_recent_img_metadata_in_date_range
+from .asf import (
+    agg_rtc_metadata_by_burst_id,
+    get_rtc_s1_ts_metadata,
+)
 from .mgrs_burst_data import (
     get_burst_ids_in_mgrs_tiles,
     get_burst_table,
@@ -9,7 +12,7 @@ from .mgrs_burst_data import (
     get_lut_by_mgrs_tile_ids,
     get_mgrs_burst_lut_path,
     get_mgrs_table,
-    get_mgrs_tile_overlapping_geometry,
+    get_mgrs_tiles_overlapping_geometry,
 )
 
 
@@ -31,9 +34,8 @@ __all__ = [
     'get_lut_by_mgrs_tile_ids',
     'get_burst_table_from_mgrs_tiles',
     'get_burst_ids_in_mgrs_tiles',
-    'get_mgrs_tile_overlapping_geometry',
-    'get_most_recent_img_metadata_in_date_range',
-    'get_asf_rtc_burst_metadata',
+    'get_mgrs_tiles_overlapping_geometry',
+    'get_rtc_s1_ts_metadata',
     'get_mgrs_burst_lut_path',
     'agg_rtc_metadata_by_burst_id',
 ]

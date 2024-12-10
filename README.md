@@ -1,24 +1,10 @@
 # dist-s1-enumerator
 
-[![Actions Status][actions-badge]][actions-link]
-[![PyPI version][pypi-version]][pypi-link]
-
-[![Conda-Forge][conda-badge]][conda-link]
-[![GitHub Discussion][github-discussions-badge]][github-discussions-link]
-
-
-<!-- prettier-ignore-start -->
-[actions-badge]:            https://github.com/opera-adt/dist-s1-enumerator/workflows/CI/badge.svg
-[actions-link]:             https://github.com/opera-adt/dist-s1-enumerator/actions
-[conda-badge]:              https://img.shields.io/conda/vn/conda-forge/dist-s1-enumerator
-[conda-link]:               https://github.com/conda-forge/dist-s1-enumerator-feedstock
-[github-discussions-badge]: https://img.shields.io/static/v1?label=Discussions&message=Ask&color=blue&logo=github
-[github-discussions-link]:  https://github.com/opera-adt/dist-s1-enumerator/discussions
-[pypi-link]:                https://pypi.org/project/dist-s1-enumerator/
-[pypi-platforms]:           https://img.shields.io/pypi/pyversions/dist-s1-enumerator
-[pypi-version]:             https://img.shields.io/pypi/v/dist-s1-enumerator
-
-<!-- prettier-ignore-end -->
+[![PyPI license](https://img.shields.io/pypi/l/dist-s1-enumerator.svg)](https://pypi.python.org/pypi/dist-s1-enumerator/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/dist-s1-enumerator.svg)](https://pypi.python.org/pypi/dist-s1-enumerator/)
+[![PyPI version](https://img.shields.io/pypi/v/dist-s1-enumerator.svg)](https://pypi.python.org/pypi/dist-s1-enumerator/)
+[![Conda version](https://img.shields.io/conda/vn/conda-forge/dist_s1_enumerator)](https://anaconda.org/conda-forge/dist_s1_enumerator)
+[![Conda platforms](https://img.shields.io/conda/pn/conda-forge/dist_s1_enumerator)](https://anaconda.org/conda-forge/dist_s1_enumerator)
 
 This is a Python library for staging data necessary for the DIST-S1 workflow.
 

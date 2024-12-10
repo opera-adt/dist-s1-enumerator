@@ -86,3 +86,12 @@ __pycache__/
 
 # pre-commit
 .pre-commit-config.yaml
+
+# Ruff
+.ruff_cache/
+
+# Data directory
+**/out/
+
+# Notebooks
+notebooks/*.parquet
