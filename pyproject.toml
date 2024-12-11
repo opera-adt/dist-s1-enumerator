@@ -62,9 +62,16 @@ exclude = [
     "build",
     "dist",
     "site-packages",
-    "notebooks/"
+    "notebooks/*"
 ]
 indent-width = 4
+# Enable specific rule sets (e.g., for Flake8 compatibility).
+extend-select = [
+    "F",  # Flake8 built-in rules
+    "E",  # Pycodestyle (used by Flake8)
+    "W",  # Pycodestyle warnings
+    "I",  # Import-related rules (isort compatibility)
+]
 
 [tool.ruff.format]
 quote-style = "single"
@@ -84,3 +91,4 @@ convention = "numpy"
 [tool.ruff.lint.isort]
 case-sensitive = true
 lines-after-imports = 2
+known-first-party = ['dist_s1_enumerator']

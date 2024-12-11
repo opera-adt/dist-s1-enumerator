@@ -10,15 +10,26 @@ from tqdm import tqdm
 
 
 def _generate_rtc_s1_local_paths(
-    urls: list[str], data_dir: Path | str, track_token: str, date_tokens: list[str]
+    urls: list[str], data_dir: Path | str, track_token: list, date_tokens: list[str], mgrs_tokens: list[str]
 ) -> list[Path]:
     data_dir = Path(data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    if len(urls) != len(date_tokens):
-        raise ValueError('Number of URLs and date tokens must be the same.')
+    n = len(urls)
+    bad_data = [
+        (input_name, len(l))
+        for (input_name, l) in zip(
+            ['urls', 'date_tokens', 'mgrs_tokens', 'track_token'], [urls, date_tokens, mgrs_tokens, track_token]
+        )
+        if len(l) != n
+    ]
+    if bad_data:
+        raise ValueError(f'Number of {bad_data[0][0]} (which is {bad_data[0][1]}) must match the number of URLs ({n}).')
 
-    dst_dirs = [data_dir / track_token / date_token for date_token in date_tokens]
+    dst_dirs = [
+        data_dir / mgrs_token / track_token / date_token
+        for (mgrs_token, track_token, date_token) in zip(mgrs_tokens, track_token, date_tokens)
+    ]
     [dst_dir.mkdir(parents=True, exist_ok=True) for dst_dir in dst_dirs]
 
     local_paths = [dst_dir / url.split('/')[-1] for (dst_dir, url) in zip(dst_dirs, urls)]
@@ -28,12 +39,12 @@ def _generate_rtc_s1_local_paths(
 def generate_rtc_s1_local_paths(df_rtc_ts: gpd.GeoDataFrame, data_dir: Path | str) -> list[Path]:
     vv_urls = df_rtc_ts['url_vv'].tolist()
     vh_urls = df_rtc_ts['url_vh'].tolist()
-    tracks = df_rtc_ts['track_number'].astype(str).unique().tolist()
-    track_token = '_'.join(tracks)
-    date_tokens = df_rtc_ts['acq_date'].astype(str).tolist()
+    track_tokens = df_rtc_ts['track_token'].tolist()
+    date_tokens = df_rtc_ts['acq_date'].dt.date.astype(str).tolist()
+    mgrs_tokens = df_rtc_ts['mgrs_tile_id'].tolist()
 
-    out_paths_vv = _generate_rtc_s1_local_paths(vv_urls, data_dir, track_token, date_tokens)
-    out_paths_vh = _generate_rtc_s1_local_paths(vh_urls, data_dir, track_token, date_tokens)
+    out_paths_vv = _generate_rtc_s1_local_paths(vv_urls, data_dir, track_tokens, date_tokens, mgrs_tokens)
+    out_paths_vh = _generate_rtc_s1_local_paths(vh_urls, data_dir, track_tokens, date_tokens, mgrs_tokens)
     df_out = df_rtc_ts.copy()
     df_out['loc_path_vv'] = out_paths_vv
     df_out['loc_path_vh'] = out_paths_vh
