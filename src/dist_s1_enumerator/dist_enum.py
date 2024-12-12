@@ -81,7 +81,7 @@ def enumerate_one_dist_s1_product(mgrs_tile_id: str,
 def enumerate_dist_s1_products(
     df_rtc_ts: gpd.GeoDataFrame,
     mgrs_tile_ids: list[str],
-    n_pre_images_per_burst_target:int = 10,
+    n_pre_images_per_burst_target: int = 10,
     min_pre_images_per_burst: int = 2,
     tqdm_enable: bool = True,
     lookback_days_max: int = 365,
