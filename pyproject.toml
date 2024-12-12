@@ -65,24 +65,19 @@ exclude = [
     "notebooks/*"
 ]
 indent-width = 4
-# Enable specific rule sets (e.g., for Flake8 compatibility).
-extend-select = [
-    "F",  # Flake8 built-in rules
-    "E",  # Pycodestyle (used by Flake8)
-    "W",  # Pycodestyle warnings
-    "I",  # Import-related rules (isort compatibility)
-]
 
 [tool.ruff.format]
 quote-style = "single"
 
 [tool.ruff.lint]
-extend-select = [
-    "I",   # isort: https://docs.astral.sh/ruff/rules/#isort-i
-    "UP",  # pyupgrade: https://docs.astral.sh/ruff/rules/#pyupgrade-up
-    # "D",   # pydocstyle: https://docs.astral.sh/ruff/rules/#pydocstyle-d
-    # "ANN", # annotations: https://docs.astral.sh/ruff/rules/#flake8-annotations-ann
-    "PTH", # use-pathlib-pth: https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth
+select = [
+    'F',
+    'E',
+    'I',
+    'W',
+    'PTH',
+    'UP',
+    'NPY201',
 ]
 
 [tool.ruff.lint.pydocstyle]
