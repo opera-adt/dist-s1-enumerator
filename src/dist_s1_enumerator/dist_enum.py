@@ -8,13 +8,15 @@ from dist_s1_enumerator.asf import get_rtc_s1_temporal_group_metadata
 from dist_s1_enumerator.mgrs_burst_data import get_lut_by_mgrs_tile_ids
 
 
-def enumerate_one_dist_s1_product(mgrs_tile_id: str,
-                                  track_number: int,
-                                  post_date: datetime,
-                                  post_date_buffer_days: int = 1,
-                                  max_pre_imgs_per_burst: int = 10,
-                                  delta_window_days: int = 365,
-                                  delta_lookback_days: int = 0) -> gpd.GeoDataFrame:
+def enumerate_one_dist_s1_product(
+    mgrs_tile_id: str,
+    track_number: int,
+    post_date: datetime,
+    post_date_buffer_days: int = 1,
+    max_pre_imgs_per_burst: int = 10,
+    delta_window_days: int = 365,
+    delta_lookback_days: int = 0,
+) -> gpd.GeoDataFrame:
     """Enumerate a single product using unique DIST-S1 identifiers.
 
     The key identifiers are:
@@ -55,21 +57,25 @@ def enumerate_one_dist_s1_product(mgrs_tile_id: str,
     if post_date_buffer_days >= 6:
         raise ValueError('post_date_buffer_days must be less than 6 (S1 pass length) - please check available data')
 
-    df_rtc_post = get_rtc_s1_temporal_group_metadata([mgrs_tile_id],
-                                                     track_numbers=[track_number],
-                                                     start_acq_dt=post_date + timedelta(days=post_date_buffer_days),
-                                                     stop_acq_dt=post_date - timedelta(days=post_date_buffer_days),
-                                                     # Should take less than 5 minutes for S1 to pass over MGRS tile
-                                                     max_variation_seconds=300,
-                                                     n_images_per_burst=1)
+    df_rtc_post = get_rtc_s1_temporal_group_metadata(
+        [mgrs_tile_id],
+        track_numbers=[track_number],
+        start_acq_dt=post_date + timedelta(days=post_date_buffer_days),
+        stop_acq_dt=post_date - timedelta(days=post_date_buffer_days),
+        # Should take less than 5 minutes for S1 to pass over MGRS tile
+        max_variation_seconds=300,
+        n_images_per_burst=1,
+    )
 
     post_date_min = df_rtc_post.acq_dt.min()
     lookback_final = delta_window_days + delta_lookback_days
-    df_rtc_pre = get_rtc_s1_temporal_group_metadata([mgrs_tile_id],
-                                                    track_numbers=[track_number],
-                                                    start_acq_dt=(post_date_min - timedelta(days=lookback_final)),
-                                                    stop_acq_dt=(post_date_min - timedelta(days=delta_lookback_days)),
-                                                    n_images_per_burst=max_pre_imgs_per_burst)
+    df_rtc_pre = get_rtc_s1_temporal_group_metadata(
+        [mgrs_tile_id],
+        track_numbers=[track_number],
+        start_acq_dt=(post_date_min - timedelta(days=lookback_final)),
+        stop_acq_dt=(post_date_min - timedelta(days=delta_lookback_days)),
+        n_images_per_burst=max_pre_imgs_per_burst,
+    )
 
     df_rtc_pre['input_category'] = 'pre'
     df_rtc_post['input_category'] = 'post'
