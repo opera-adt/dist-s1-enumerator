@@ -7,34 +7,27 @@ import pandas as pd
 from rasterio.crs import CRS
 from shapely.geometry import shape
 
+from dist_s1_enumerator.mgrs_burst_data import get_burst_ids_in_mgrs_tiles, get_lut_by_mgrs_tile_ids
 
-def get_asf_rtc_s1_metadata_for_fixed_track(
+
+def get_rtc_s1_ts_metadata_by_burst_ids(
     burst_ids: str | list[str],
-    earliest_acceptable_acq_dt: str | datetime = None,
-    latest_acceptable_acq_dt: str | datetime = None,
+    start_acq_dt: str | datetime = None,
+    stop_acq_dt: str | datetime = None,
 ) -> gpd.GeoDataFrame:
-    """
-    Get ASF RTC burst metadata for a fixed track. The track number is extracted from the burst_ids.
-    """
+    """Get ASF RTC burst metadata for a fixed track. The track number is extracted from the burst_ids."""
     if isinstance(burst_ids, str):
         burst_ids = [burst_ids]
+
     # make sure JPL syntax is transformed to asf syntax
     burst_ids = [burst_id.upper().replace('-', '_') for burst_id in burst_ids]
-
-    # Ensure there is at most one track number or 2 sequential tracks
-    unique_tracks = list(set([int(b_id.split('_')[0][1:]) for b_id in burst_ids]))
-    unique_tracks_str = ', '.join(map(str, unique_tracks))
-    if len(unique_tracks) > 2:
-        raise ValueError(f'More than 2 unique track numbers found: {unique_tracks_str}')
-    if len(unique_tracks) == 2 and unique_tracks[0] + 1 != unique_tracks[1]:
-        raise ValueError(f'Non-sequential track numbers found for tracks {unique_tracks_str}.')
 
     resp = asf.search(
         operaBurstID=burst_ids,
         processingLevel='RTC',
         polarization=['VV', 'VH'],
-        start=earliest_acceptable_acq_dt,
-        end=latest_acceptable_acq_dt,
+        start=start_acq_dt,
+        end=stop_acq_dt,
     )
     if not resp:
         raise warn('No results - please check burst id and availability.', category=UserWarning)
@@ -55,9 +48,11 @@ def get_asf_rtc_s1_metadata_for_fixed_track(
     ]
 
     df_rtc = gpd.GeoDataFrame(properties_f, geometry=geometry, crs=CRS.from_epsg(4326))
+
     # Ensure dual polarization
     df_rtc['jpl_burst_id'] = df_rtc['opera_id'].map(lambda bid: bid.split('_')[3])
     df_rtc = df_rtc[df_rtc.polarization == 'VV+VH'].reset_index(drop=True)
+    # Sort by burst_id and acquisition date
     df_rtc = df_rtc.sort_values(by=['jpl_burst_id', 'acq_dt']).reset_index(drop=True)
 
     # Remove duplicates from time series
@@ -65,21 +60,11 @@ def get_asf_rtc_s1_metadata_for_fixed_track(
     df_rtc = df_rtc.drop_duplicates(subset=['dedup_id']).reset_index(drop=True)
     df_rtc = df_rtc.drop(columns=['dedup_id'])
 
-    # Group by acquisition time to ensure that the acquisition date is grouped by date of earliest time in pass
-    # We deal with midnight crossing by shifting the time by 10 minutes
-    midnight_crossing = (df_rtc['acq_dt'].dt.hour == 0).any() & (df_rtc['acq_dt'].dt.hour == 23).any()
-    time_offset = pd.Timedelta('10 minutes')
-    if midnight_crossing:
-        df_rtc['acq_date'] = (df_rtc['acq_dt'] - time_offset * (df_rtc['acq_dt'].dt.hour == 0)).dt.date.astype(str)
-    else:
-        df_rtc['acq_date'] = df_rtc['acq_dt'].dt.date.astype(str)
-
     df_rtc = df_rtc[
         [
             'opera_id',
             'jpl_burst_id',
             'acq_dt',
-            'acq_date',
             'polarization',
             'url_vh',
             'url_vv',
@@ -90,66 +75,124 @@ def get_asf_rtc_s1_metadata_for_fixed_track(
     return df_rtc
 
 
-def get_rtc_s1_ts_metadata(
-    burst_ids: list[str],
-    earliest_acceptable_acq_dt: datetime,
-    latest_acceptable_acq_dt: datetime,
-    maximum_variation_in_acq_dts_seconds: float = None,
+def get_rtc_s1_temporal_group_metadata(
+    mgrs_tile_ids: list[str],
+    track_numbers: list[int],
     n_images_per_burst: int = 1,
+    start_acq_dt: datetime | str = None,
+    stop_acq_dt: datetime | str = None,
+    max_variation_seconds: float = None,
 ) -> gpd.GeoDataFrame:
     """
-    Get the most recent burst image for a list of burst ids within a date range.
+    Meant for acquiring a pre-image or post-image set from MGRS tiles for a given S1 pass.
 
-    For acquiring a post-image set, the intended use is for a group of burst_ids that are acquired in a single S1 pass.
-    There is no check that the burst_ids supplied are all from the same S1 acqusition group. As such, we provide the
-    keyword argument maximum_variation_in_acq_dts_seconds to ensure the latest acquisition of are within the latest
-    acquisition time from the most recent burst image. If this is not provided, you will get the latest burst image
-    product for each burst within the allowable date range. This could yield imagery collected on different dates
-    for the burst_ids provided.
+    Obtains the most recent burst image set within a date range.
+
+    For acquiring a post-image set, we provide the keyword argument max_variation_seconds to ensure the latest
+    acquisition of are within the latest acquisition time from the most recent burst image. If this is not provided,
+    you will get the latest burst image product for each burst within the allowable date range. This could yield imagery
+    collected on different dates for the burst_ids provided.
 
     For acquiring a pre-image set, we use n_images_per_burst > 1. We get the latest n_images_per_burst images for each
     burst and there can be different number of images per burst for all the burst supplied and/or the image
     time series can be composed of images from different dates.
 
+    Note we take care of the equator edge cases in LUT of the MGRS/burst_ids, so only need to provide 1 valid track
+    number in pass.
+
     Parameters
     ----------
-    burst_ids : list[str]
-    earliest_acceptable_acq_dt : datetime
-    latest_acceptable_acq_dt : datetime
-    maximum_variation_in_acq_dts_seconds : float, optional
+    mgrs_tile_ids: list[str]
+    track_numbers: list[int]
+    start_acq_dt: datetime | str
+    stop_acq_dt : datetime
+    max_variation_seconds : float, optional
+    n_images_per_burst : int, optional
 
     Returns
     -------
     gpd.GeoDataFrame
     """
-    if n_images_per_burst == 1 and maximum_variation_in_acq_dts_seconds is None:
+    if len(track_numbers) > 2:
+        raise ValueError('Cannot handle more than 2 track numbers.')
+    if (len(track_numbers) == 2) and (abs(track_numbers[0] - track_numbers[1]) > 1):
+        raise ValueError('Two track numbers that are not consecutive were provided.')
+    burst_ids = get_burst_ids_in_mgrs_tiles(mgrs_tile_ids, track_numbers=track_numbers)
+    if not burst_ids:
+        raise ValueError('No burst ids found for the provided MGRS tile and track numbers.')
+
+    if (n_images_per_burst == 1) and (max_variation_seconds is None):
         warn(
-            'No maximum variation in acq dts or n_images_per_burst provided. This could yield imagery collected on '
+            'No maximum variation in acq dts provided although n_images_per_burst is 1. '
+            'This could yield imagery collected on '
             'different dates for the burst_ids provided.',
             category=UserWarning,
         )
-    df_rtc = get_asf_rtc_s1_metadata_for_fixed_track(
+    df_rtc = get_rtc_s1_ts_metadata_by_burst_ids(
         burst_ids,
-        earliest_acceptable_acq_dt=earliest_acceptable_acq_dt,
-        latest_acceptable_acq_dt=latest_acceptable_acq_dt,
+        start_acq_dt=start_acq_dt,
+        stop_acq_dt=stop_acq_dt,
     )
     columns = df_rtc.columns
     # Assumes that each group is ordered by date (earliest first and most recent last)
     df_rtc = df_rtc.groupby('jpl_burst_id').tail(n_images_per_burst).reset_index(drop=False)
     df_rtc = df_rtc[columns]
-    if maximum_variation_in_acq_dts_seconds is not None:
-        if n_images_per_burst > 1:
-            raise ValueError('Cannot apply maximum variation in acq dts when n_images_per_burst > 1.')
+    if max_variation_seconds is not None:
+        if (n_images_per_burst is None) or (n_images_per_burst > 1):
+            raise ValueError('Cannot apply maximum variation in acq dts when n_images_per_burst > 1 or None.')
         max_dt = df_rtc['acq_dt'].max()
-        ind = df_rtc['acq_dt'] > max_dt - pd.Timedelta(seconds=maximum_variation_in_acq_dts_seconds)
+        ind = df_rtc['acq_dt'] > max_dt - pd.Timedelta(seconds=max_variation_seconds)
         df_rtc = df_rtc[ind].reset_index(drop=True)
+    min_dt = df_rtc['acq_dt'].min()
+    df_rtc['pass_id'] = df_rtc['acq_dt'].map(lambda dt: (dt - min_dt).total_seconds() / 86400 // 6)
+    df_rtc['acq_date'] = df_rtc.groupby('pass_id')['acq_dt'].transform('min').dt.floor('D')
+
+    df_lut = get_lut_by_mgrs_tile_ids(mgrs_tile_ids)
+    df_rtc = pd.merge(
+        df_rtc,
+        df_lut[['jpl_burst_id', 'mgrs_tile_id', 'acq_group_id_within_mgrs_tile']],
+        on='jpl_burst_id',
+        how='inner',
+    )
+
+    def get_track_token(track_numbers: list[int]) -> str:
+        unique_track_numbers = track_numbers.unique().tolist()
+        return '_'.join(map(str, sorted(unique_track_numbers)))
+
+    df_rtc['track_token'] = df_rtc.groupby(['mgrs_tile_id', 'acq_group_id_within_mgrs_tile'])['track_number'].transform(
+        get_track_token
+    )
+    df_rtc.drop(columns=['pass_id'], inplace=True)
+
     return df_rtc
 
 
-def agg_rtc_metadata_by_burst_id(df_rtc: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def get_rtc_s1_ts_metadata_from_mgrs_tiles(
+    mgrs_tile_ids: list[str],
+    track_numbers: list[int] = None,
+    start_acq_dt: str | datetime = None,
+    stop_acq_dt: str | datetime = None,
+) -> gpd.GeoDataFrame:
+    """Get the RTC S1 time series for a given MGRS tile and track number."""
+    if isinstance(start_acq_dt, str):
+        start_acq_dt = datetime.strptime(start_acq_dt, '%Y-%m-%d')
+    if isinstance(stop_acq_dt, str):
+        stop_acq_dt = datetime.strptime(stop_acq_dt, '%Y-%m-%d')
+
+    burst_ids = get_burst_ids_in_mgrs_tiles(mgrs_tile_ids, track_numbers=track_numbers)
+    df_rtc_ts = get_rtc_s1_ts_metadata_by_burst_ids(burst_ids, start_acq_dt=start_acq_dt, stop_acq_dt=stop_acq_dt)
+    if df_rtc_ts.empty:
+        mgrs_tiles_str = ','.join(mgrs_tile_ids)
+        track_numbers_str = ','.join(map(str, track_numbers))
+        warn(f'No RTC S1 metadata found for track {track_numbers_str} in MGRS tile {mgrs_tiles_str}.')
+        return gpd.GeoDataFrame()
+    return df_rtc_ts
+
+
+def agg_rtc_metadata_by_burst_id(df_rtc_ts: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     df_agg = (
-        df_rtc.groupby('jpl_burst_id')
-        .agg(count=('jpl_burst_id', 'size'), earliest_acq_date=('acq_date', 'min'), latest_acq_date=('acq_date', 'max'))
+        df_rtc_ts.groupby('jpl_burst_id')
+        .agg(count=('jpl_burst_id', 'size'), earliest_acq_date=('acq_dt', 'min'), latest_acq_date=('acq_dt', 'max'))
         .reset_index()
     )
 
