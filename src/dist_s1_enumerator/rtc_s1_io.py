@@ -17,11 +17,11 @@ def _generate_rtc_s1_local_paths(
 
     n = len(urls)
     bad_data = [
-        (input_name, len(l))
-        for (input_name, l) in zip(
+        (input_name, len(data))
+        for (input_name, data) in zip(
             ['urls', 'date_tokens', 'mgrs_tokens', 'track_token'], [urls, date_tokens, mgrs_tokens, track_token]
         )
-        if len(l) != n
+        if len(data) != n
     ]
     if bad_data:
         raise ValueError(f'Number of {bad_data[0][0]} (which is {bad_data[0][1]}) must match the number of URLs ({n}).')

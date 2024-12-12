@@ -55,7 +55,9 @@ def get_mgrs_tiles_overlapping_geometry(geometry: Polygon | Point) -> gpd.GeoDat
 
 def get_burst_ids_in_mgrs_tiles(mgrs_tile_ids: list[str], track_numbers: list[int] = None) -> list[str]:
     """Get all the burst ids in the provided MGRS tiles.
-    If track numbers are provided gets all the burst ids for the provided pass associated with the tracks for each MGRS tile"""
+    If track numbers are provided gets all the burst ids for the provided pass associated with the tracks
+    for each MGRS tile.
+    """
     df_mgrs_burst_luts = get_lut_by_mgrs_tile_ids(mgrs_tile_ids)
     if track_numbers is not None:
         tile_data = []
@@ -68,7 +70,8 @@ def get_burst_ids_in_mgrs_tiles(mgrs_tile_ids: list[str], track_numbers: list[in
             if len(acq_ids) != 1:
                 track_numbers_str = ','.join(map(str, track_numbers))
                 raise ValueError(
-                    f'Multiple acq_group_id_within_mgrs_tile found for mgrs_tile_id {mgrs_tile_id} and track_numbers {track_numbers_str}.'
+                    f'Multiple acq_group_id_within_mgrs_tile found for mgrs_tile_id {mgrs_tile_id} and '
+                    f'track_numbers {track_numbers_str}.'
                 )
             acq_id = acq_ids[0]
             tile_data.append(df_lut[df_lut.acq_group_id_within_mgrs_tile == acq_id])

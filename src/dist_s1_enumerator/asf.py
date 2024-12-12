@@ -98,7 +98,8 @@ def get_rtc_s1_temporal_group_metadata(
     burst and there can be different number of images per burst for all the burst supplied and/or the image
     time series can be composed of images from different dates.
 
-    Note we take care of the equator edge cases in LUT of the MGRS/burst_ids, so only need to provide 1 valid track number in pass.
+    Note we take care of the equator edge cases in LUT of the MGRS/burst_ids, so only need to provide 1 valid track
+    number in pass.
 
     Parameters
     ----------
@@ -123,7 +124,8 @@ def get_rtc_s1_temporal_group_metadata(
 
     if (n_images_per_burst == 1) and (max_variation_seconds is None):
         warn(
-            'No maximum variation in acq dts provided although n_images_per_burst is 1. This could yield imagery collected on '
+            'No maximum variation in acq dts provided although n_images_per_burst is 1. '
+            'This could yield imagery collected on '
             'different dates for the burst_ids provided.',
             category=UserWarning,
         )
