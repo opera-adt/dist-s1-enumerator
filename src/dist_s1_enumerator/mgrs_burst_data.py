@@ -55,6 +55,7 @@ def get_mgrs_tiles_overlapping_geometry(geometry: Polygon | Point) -> gpd.GeoDat
 
 def get_burst_ids_in_mgrs_tiles(mgrs_tile_ids: list[str], track_numbers: list[int] = None) -> list[str]:
     """Get all the burst ids in the provided MGRS tiles.
+
     If track numbers are provided gets all the burst ids for the provided pass associated with the tracks
     for each MGRS tile.
     """

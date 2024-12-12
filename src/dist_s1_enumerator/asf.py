@@ -15,9 +15,7 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     start_acq_dt: str | datetime = None,
     stop_acq_dt: str | datetime = None,
 ) -> gpd.GeoDataFrame:
-    """
-    Get ASF RTC burst metadata for a fixed track. The track number is extracted from the burst_ids.
-    """
+    """Get ASF RTC burst metadata for a fixed track. The track number is extracted from the burst_ids."""
     if isinstance(burst_ids, str):
         burst_ids = [burst_ids]
 
@@ -87,6 +85,7 @@ def get_rtc_s1_temporal_group_metadata(
 ) -> gpd.GeoDataFrame:
     """
     Meant for acquiring a pre-image or post-image set from MGRS tiles for a given S1 pass.
+
     Obtains the most recent burst image set within a date range.
 
     For acquiring a post-image set, we provide the keyword argument max_variation_seconds to ensure the latest
@@ -174,9 +173,7 @@ def get_rtc_s1_ts_metadata_from_mgrs_tiles(
     start_acq_dt: str | datetime = None,
     stop_acq_dt: str | datetime = None,
 ) -> gpd.GeoDataFrame:
-    """
-    Get the RTC S1 time series for a given MGRS tile and track number.
-    """
+    """Get the RTC S1 time series for a given MGRS tile and track number."""
     if isinstance(start_acq_dt, str):
         start_acq_dt = datetime.strptime(start_acq_dt, '%Y-%m-%d')
     if isinstance(stop_acq_dt, str):

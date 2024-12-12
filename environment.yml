@@ -19,6 +19,8 @@ dependencies:
  - pytest-cov
  - rasterio
  - requests
+ - isort
+ - pycodestyle
  - ruff
  - shapely
  - pandas

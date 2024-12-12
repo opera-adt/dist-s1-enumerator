@@ -1,19 +1,112 @@
+from datetime import datetime, timedelta
+
 import geopandas as gpd
 import pandas as pd
 from tqdm import tqdm
 
+from dist_s1_enumerator.asf import get_rtc_s1_temporal_group_metadata
 from dist_s1_enumerator.mgrs_burst_data import get_lut_by_mgrs_tile_ids
+
+
+def enumerate_one_dist_s1_product(mgrs_tile_id: str,
+                                  track_number: int,
+                                  post_date: datetime,
+                                  post_date_buffer_days: int = 1,
+                                  max_pre_imgs_per_burst: int = 10,
+                                  delta_window_days: int = 365,
+                                  delta_lookback_days: int = 0) -> gpd.GeoDataFrame:
+    """Enumerate a single product using unique DIST-S1 identifiers.
+
+    The key identifiers are:
+
+    1. MGRS Tile
+    2. Track Number
+    3. Post-image date (with a buffer)
+
+    Hits the ASF DAAC API to get the necessary pre-/post-image data. Not
+    recommended for enumerating large numbers of products over multiple MGRS
+    tiles and/or track numbers.
+
+    Parameters
+    ----------
+    mgrs_tile_id : str
+        MGRS tile for DIST-S1 product
+    track_number : int
+        Track number for RTC-S1 pass
+    post_date : datetime
+        Approximate date of post-image Acquistion
+    post_date_buffer_days : int, optional
+        Number of days around the specified post date to search for post-image
+        RTC-S1 data
+    max_pre_imgs_per_burst : int, optional
+        Number of pre-images per bust to include, by default 10
+    delta_window_days : int, optional
+        The acceptable window of time to search for pre-image RTC-S1 data
+        (latest date is determine delta_lookback_days), by default 365
+    delta_lookback_days : int, optional
+        The latest acceptable date to search for pre-image RTC-S1 data, by
+        default 0, i.e. an immediate lookback
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+    """
+    # TODO: Check if we can specify a huge range and still get expected result
+    if post_date_buffer_days >= 6:
+        raise ValueError('post_date_buffer_days must be less than 6 (S1 pass length) - please check available data')
+
+    df_rtc_post = get_rtc_s1_temporal_group_metadata([mgrs_tile_id],
+                                                     track_numbers=[track_number],
+                                                     start_acq_dt=post_date + timedelta(days=post_date_buffer_days),
+                                                     stop_acq_dt=post_date - timedelta(days=post_date_buffer_days),
+                                                     # Should take less than 5 minutes for S1 to pass over MGRS tile
+                                                     max_variation_seconds=300,
+                                                     n_images_per_burst=1)
+
+    post_date_min = df_rtc_post.acq_dt.min()
+    lookback_final = delta_window_days + delta_lookback_days
+    df_rtc_pre = get_rtc_s1_temporal_group_metadata([mgrs_tile_id],
+                                                    track_numbers=[track_number],
+                                                    start_acq_dt=(post_date_min - timedelta(days=lookback_final)),
+                                                    stop_acq_dt=(post_date_min - timedelta(days=delta_lookback_days)),
+                                                    n_images_per_burst=max_pre_imgs_per_burst)
+
+    df_rtc_pre['input_category'] = 'pre'
+    df_rtc_post['input_category'] = 'post'
+
+    df_rtc_product = pd.concat([df_rtc_pre, df_rtc_post], axis=0).reset_index(drop=True)
+    return df_rtc_product
 
 
 def enumerate_dist_s1_products(
     df_rtc_ts: gpd.GeoDataFrame,
     mgrs_tile_ids: list[str],
-    n_pre_images_per_burst_target: int = 10,
+    n_pre_images_per_burst_target:int = 10,
     min_pre_images_per_burst: int = 2,
     tqdm_enable: bool = True,
     lookback_days_max: int = 365,
 ) -> gpd.GeoDataFrame:
-    """ """
+    """
+    Enumerate from a stack of RTC-S1 metadata and MGRS tile.
+
+    Ensures we do not have to continually hit the ASF DAAC API.
+
+    Parameters
+    ----------
+    df_rtc_ts : gpd.GeoDataFrame
+        RTC-S1 data
+    mgrs_tile_ids : list[str]
+        List of MGRS tiles to enumerate
+    n_pre_images_per_burst_target : int, optional
+        Number of pre-images per burst to include, by default 10
+    min_pre_images_per_burst : int, optional
+        Minimum number of pre-images per burst to include, by default 2
+    tqdm_enable : bool, optional
+        Whether to enable tqdm progress bars, by default True
+    lookback_days_max : int, optional
+        Maximum number of days to search for pre-image RTC-S1 data, by default
+        365
+    """
     df_lut_all = get_lut_by_mgrs_tile_ids(mgrs_tile_ids)
 
     products = []
