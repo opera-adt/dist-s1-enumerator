@@ -3,10 +3,18 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
+from pandera import DataFrameSchema
 from shapely.geometry import Point, Polygon
+
+from dist_s1_enumerator.data_models import BURST_SCHEMA, BURST_MGRS_LUT_SCHEMA
 
 
 DATA_DIR = Path(__file__).resolve().parent / 'data'
+
+
+def reorder_columns(df: gpd.GeoDataFrame, schema: DataFrameSchema) -> gpd.GeoDataFrame:
+    df = df[[col for col in schema.columns.keys() if col in df.columns]]
+    return df
 
 
 def get_mgrs_burst_lut_path() -> Path:
@@ -24,10 +32,14 @@ def get_burst_data_path() -> Path:
     return parquet_path
 
 
-def get_burst_table(burst_ids: list[str]) -> gpd.GeoDataFrame:
+def get_burst_table(burst_ids: list[str] | str) -> gpd.GeoDataFrame:
     parquet_path = get_burst_data_path()
+    if isinstance(burst_ids, str):
+        burst_ids = [burst_ids]
     filters = [('jpl_burst_id', 'in', burst_ids)]
     df = gpd.read_parquet(parquet_path, filters=filters)
+    BURST_SCHEMA.validate(df)
+    df = reorder_columns(df, BURST_SCHEMA)
     return df
 
 
@@ -37,6 +49,8 @@ def get_lut_by_mgrs_tile_ids(mgrs_tile_ids: str | list[str]) -> gpd.GeoDataFrame
     parquet_path = get_mgrs_burst_lut_path()
     filters = [('mgrs_tile_id', 'in', mgrs_tile_ids)]
     df_mgrs_burst_lut = pd.read_parquet(parquet_path, filters=filters)
+    BURST_MGRS_LUT_SCHEMA.validate(df_mgrs_burst_lut)
+    df_mgrs_burst_lut = reorder_columns(df_mgrs_burst_lut, BURST_MGRS_LUT_SCHEMA)
     return df_mgrs_burst_lut
 
 
@@ -91,4 +105,6 @@ def get_burst_table_from_mgrs_tiles(mgrs_tile_ids: str | list[str]) -> list:
         how='left',
         on='jpl_burst_id',
     )
+    BURST_SCHEMA.validate(df_burst)
+    df_burst = reorder_columns(df_burst, BURST_SCHEMA)
     return df_burst
