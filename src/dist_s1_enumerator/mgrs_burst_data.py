@@ -6,7 +6,7 @@ import pandas as pd
 from pandera import DataFrameSchema
 from shapely.geometry import Point, Polygon
 
-from dist_s1_enumerator.data_models import BURST_SCHEMA, BURST_MGRS_LUT_SCHEMA
+from dist_s1_enumerator.data_models import BURST_MGRS_LUT_SCHEMA, BURST_SCHEMA
 
 
 DATA_DIR = Path(__file__).resolve().parent / 'data'
