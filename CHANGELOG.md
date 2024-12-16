@@ -9,7 +9,15 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.0.3] - 2024-12-12
 
 ### Added
+* Explicit error messages when no data is retrieved from various tables (e.g. burst data, MGRS/burst LUT data, etc.)
 * Suite of tests for enumeration
+* Schema with Pandera to explicitly define and validate columns and their types
+
+## Fixed
+* `epsg` (now `utm_epsg`) was a string (with extra spacing) and now it's an integer
+
+## Changed
+* For the MGRS table, we renamed `epsg` to `utm_epsg` (to be in line with `utm_wkt`) and cast it as an int
 
 ## [0.0.2]
 

@@ -11,6 +11,15 @@ BURST_SCHEMA = DataFrameSchema(
     }
 )
 
+MGRS_TILE_SCHEMA = DataFrameSchema(
+    {
+        'mgrs_tile_id': Column(str, required=True),
+        'utm_wkt': Column(str, required=True),
+        'utm_epsg': Column(int, required=True),
+        'geometry': Column('geometry', required=True),
+    }
+)
+
 BURST_MGRS_LUT_SCHEMA = DataFrameSchema(
     {
         'jpl_burst_id': Column(str, required=True),
