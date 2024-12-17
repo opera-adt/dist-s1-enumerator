@@ -7,6 +7,7 @@ import pandas as pd
 from rasterio.crs import CRS
 from shapely.geometry import shape
 
+from dist_s1_enumerator.data_models import RTC_S1_SCHEMA, reorder_columns
 from dist_s1_enumerator.mgrs_burst_data import get_burst_ids_in_mgrs_tiles, get_lut_by_mgrs_tile_ids
 
 
@@ -14,10 +15,19 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     burst_ids: str | list[str],
     start_acq_dt: str | datetime = None,
     stop_acq_dt: str | datetime = None,
+    polarizations: str = 'VV+VH',
 ) -> gpd.GeoDataFrame:
     """Get ASF RTC burst metadata for a fixed track. The track number is extracted from the burst_ids."""
     if isinstance(burst_ids, str):
         burst_ids = [burst_ids]
+
+    if polarizations not in ['VV+VH', 'HH+HV']:
+        raise ValueError(f'Invalid polarization: {polarizations}. Must be one of: VV+VH, HH+HV.')
+
+    if polarizations == 'VV+VH':
+        polarization_list = ['VV', 'VH']
+    elif polarizations == 'HH+HV':
+        polarization_list = ['HH', 'HV']
 
     # make sure JPL syntax is transformed to asf syntax
     burst_ids = [burst_id.upper().replace('-', '_') for burst_id in burst_ids]
@@ -25,7 +35,7 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     resp = asf.search(
         operaBurstID=burst_ids,
         processingLevel='RTC',
-        polarization=['VV', 'VH'],
+        polarization=polarization_list,
         start=start_acq_dt,
         end=stop_acq_dt,
     )
@@ -35,13 +45,15 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
 
     properties = [r.properties for r in resp]
     geometry = [shape(r.geojson()['geometry']) for r in resp]
+    crosspol = polarization_list[0]
+    copol = polarization_list[1]
     properties_f = [
         {
             'opera_id': p['sceneName'],
             'acq_dt': pd.to_datetime(p['startTime']),
             'polarization': '+'.join(p['polarization']),
-            'url_vh': p['url'],
-            'url_vv': (p['url'].replace('_VH.tif', '_VV.tif')),
+            'url_crosspol': p['url'],
+            'url_copol': p['url'].replace(f'_{crosspol}.tif', f'_{copol}.tif'),
             'track_number': p['pathNumber'],
         }
         for p in properties
@@ -51,7 +63,8 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
 
     # Ensure dual polarization
     df_rtc['jpl_burst_id'] = df_rtc['opera_id'].map(lambda bid: bid.split('_')[3])
-    df_rtc = df_rtc[df_rtc.polarization == 'VV+VH'].reset_index(drop=True)
+    df_rtc = df_rtc[df_rtc.polarization == polarizations].reset_index(drop=True)
+
     # Sort by burst_id and acquisition date
     df_rtc = df_rtc.sort_values(by=['jpl_burst_id', 'acq_dt']).reset_index(drop=True)
 
@@ -60,18 +73,9 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     df_rtc = df_rtc.drop_duplicates(subset=['dedup_id']).reset_index(drop=True)
     df_rtc = df_rtc.drop(columns=['dedup_id'])
 
-    df_rtc = df_rtc[
-        [
-            'opera_id',
-            'jpl_burst_id',
-            'acq_dt',
-            'polarization',
-            'url_vh',
-            'url_vv',
-            'track_number',
-            'geometry',
-        ]
-    ]
+    RTC_S1_SCHEMA.validate(df_rtc)
+    df_rtc = reorder_columns(df_rtc, RTC_S1_SCHEMA)
+
     return df_rtc
 
 

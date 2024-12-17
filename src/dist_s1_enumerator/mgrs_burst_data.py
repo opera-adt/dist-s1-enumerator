@@ -3,19 +3,32 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
-from pandera import DataFrameSchema
 from shapely.geometry import Point, Polygon
 
-from dist_s1_enumerator.data_models import BURST_MGRS_LUT_SCHEMA, BURST_SCHEMA, MGRS_TILE_SCHEMA
+from dist_s1_enumerator.data_models import BURST_MGRS_LUT_SCHEMA, BURST_SCHEMA, MGRS_TILE_SCHEMA, reorder_columns
 from dist_s1_enumerator.exceptions import NoMGRSCoverage
 
 
 DATA_DIR = Path(__file__).resolve().parent / 'data'
 
-
-def reorder_columns(df: gpd.GeoDataFrame, schema: DataFrameSchema) -> gpd.GeoDataFrame:
-    df = df[[col for col in schema.columns.keys() if col in df.columns]]
-    return df
+# Tiles that are in DIST-HLS but not in DIST-S1
+# due to coverage
+BLACKLISTED_MGRS_TILE_IDS = [
+    '01XDE',
+    '11RPH',
+    '23EMN',
+    '23EMP',
+    '23ENN',
+    '26VMN',
+    '26VPM',
+    '26VPN',
+    '27VUG',
+    '27VUH',
+    '27VWH',
+    '60EWU',
+    '60EWV',
+    '60XWK',
+]
 
 
 def get_mgrs_burst_lut_path() -> Path:
@@ -33,7 +46,6 @@ def get_burst_data_path() -> Path:
     return parquet_path
 
 
-@lru_cache
 def get_burst_table(burst_ids: list[str] | str | None = None) -> gpd.GeoDataFrame:
     parquet_path = get_burst_data_path()
     if burst_ids is None:
@@ -43,11 +55,20 @@ def get_burst_table(burst_ids: list[str] | str | None = None) -> gpd.GeoDataFram
             burst_ids = [burst_ids]
         filters = [('jpl_burst_id', 'in', burst_ids)]
         df = gpd.read_parquet(parquet_path, filters=filters)
-    BURST_SCHEMA.validate(df)
-    df = reorder_columns(df, BURST_SCHEMA)
     if df.empty:
         burst_ids_str = ', '.join(map(str, burst_ids))
         raise ValueError(f'No burst data found for {burst_ids_str}.')
+    BURST_SCHEMA.validate(df)
+    df = reorder_columns(df, BURST_SCHEMA)
+    return df.reset_index(drop=True)
+
+
+@lru_cache
+def get_mgrs_burst_lut() -> gpd.GeoDataFrame:
+    parquet_path = get_mgrs_burst_lut_path()
+    df = pd.read_parquet(parquet_path)
+    BURST_MGRS_LUT_SCHEMA.validate(df)
+    df = reorder_columns(df, BURST_MGRS_LUT_SCHEMA)
     return df.reset_index(drop=True)
 
 
@@ -82,6 +103,8 @@ def get_mgrs_tiles_overlapping_geometry(geometry: Polygon | Point) -> gpd.GeoDat
             'We only have MGRS tiles that overlap with DIST-HLS products (this is slightly less than Sentinel-2). '
         )
     df_mgrs_overlapping = df_mgrs[ind].reset_index(drop=True)
+    MGRS_TILE_SCHEMA.validate(df_mgrs_overlapping)
+    df_mgrs_overlapping = reorder_columns(df_mgrs_overlapping, MGRS_TILE_SCHEMA)
     return df_mgrs_overlapping
 
 
@@ -109,8 +132,14 @@ def get_burst_ids_in_mgrs_tiles(mgrs_tile_ids: list[str] | str, track_numbers: l
             if df_lut_temp.empty:
                 mgrs_tile_ids_str = ', '.join(map(str, mgrs_tile_ids))
                 track_numbers_str = ', '.join(map(str, track_numbers))
+                available_track_numbers = (
+                    df_mgrs_burst_luts[df_mgrs_burst_luts.mgrs_tile_id == mgrs_tile_id].track_number.unique().tolist()
+                )
+                available_track_numbers_str = ', '.join(map(str, available_track_numbers))
                 raise ValueError(
-                    f'No LUT data found for MGRS tile ids {mgrs_tile_ids_str} and track numbers {track_numbers_str}.'
+                    f'Mismatch - no LUT data found for MGRS tile ids {mgrs_tile_ids_str} '
+                    f'and track numbers {track_numbers_str}. '
+                    f'Available track numbers for tile {mgrs_tile_ids_str} are {available_track_numbers_str}.'
                 )
             acq_ids = df_lut_temp.acq_group_id_within_mgrs_tile.unique().tolist()
             if len(acq_ids) != 1:

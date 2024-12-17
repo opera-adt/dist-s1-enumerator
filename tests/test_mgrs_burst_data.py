@@ -3,9 +3,11 @@ from shapely.geometry import Point
 
 from dist_s1_enumerator.exceptions import NoMGRSCoverage
 from dist_s1_enumerator.mgrs_burst_data import (
+    BLACKLISTED_MGRS_TILE_IDS,
     get_burst_ids_in_mgrs_tiles,
     get_burst_table,
     get_lut_by_mgrs_tile_ids,
+    get_mgrs_burst_lut,
     get_mgrs_table,
     get_mgrs_tiles_overlapping_geometry,
 )
@@ -28,26 +30,37 @@ def test_burst_lookup_by_id(burst_id: str) -> None:
     assert df_burst.shape[0] == 1
 
 
-@pytest.mark.parametrize('mgrs_tile_id', get_mgrs_table()['mgrs_tile_id'].sample(10).tolist())
+# Adds some problemeatic tiles including one near the equator (`22NFF`)
+@pytest.mark.parametrize('mgrs_tile_id', get_mgrs_table()['mgrs_tile_id'].sample(10).tolist() + ['51NTA', '22NFF'])
 def test_mgrs_burst_lookups(mgrs_tile_id: str) -> None:
+    if mgrs_tile_id in BLACKLISTED_MGRS_TILE_IDS:
+        return
+
     burst_ids_0 = get_burst_ids_in_mgrs_tiles(mgrs_tile_id)
 
     df_lut = get_lut_by_mgrs_tile_ids(mgrs_tile_id)
     burst_ids_1 = df_lut.jpl_burst_id.unique().tolist()
     assert set(burst_ids_0) == set(burst_ids_1)
 
+    # There should be a unique acq_group for a given track number in an MGRS tile.
+    # We verify this extracting a track number from the burst id and then using the LUT.
+    # Get a track number from the first burst id
     track_number_token = burst_ids_0[0].split('-')[0]
     track_number = int(track_number_token[1:])
-    burst_ids_fixed_track = [burst_id for burst_id in burst_ids_0 if burst_id.split('-')[0] == track_number_token]
+    # Find the associated acq_group_id_within_mgrs_tile for the track number of the first burst id
+    acq_id_from_burst_id = df_lut[df_lut.jpl_burst_id == burst_ids_0[0]]['acq_group_id_within_mgrs_tile'].tolist()[0]
+    acq_id_from_track_numbers = (
+        df_lut[df_lut.track_number == track_number]['acq_group_id_within_mgrs_tile'].unique().tolist()
+    )
+    acq_id_from_track_number = acq_id_from_track_numbers[0]
+    assert len(acq_id_from_track_numbers) == 1
+    assert acq_id_from_burst_id == acq_id_from_track_number
 
-    burst_ids_fixed_track_1 = get_burst_ids_in_mgrs_tiles([mgrs_tile_id], track_numbers=[track_number])
-    assert set(burst_ids_fixed_track) == set(burst_ids_fixed_track_1)
-
-    df_lut = get_lut_by_mgrs_tile_ids(mgrs_tile_id)
-    df_lut_fixed_track = df_lut[df_lut.track_number == track_number].reset_index(drop=True)
-    burst_ids_pass = df_lut_fixed_track.jpl_burst_id.unique().tolist()
-    # near the equator, there can be multiple acq_group_id_within_mgrs_tile for a single track number.
-    assert all(burst_id in burst_ids_pass for burst_id in burst_ids_fixed_track)
+    burst_ids_from_pass_1 = get_burst_ids_in_mgrs_tiles([mgrs_tile_id], track_numbers=[track_number])
+    burst_ids_from_pass_2 = df_lut[
+        df_lut.acq_group_id_within_mgrs_tile == acq_id_from_track_number
+    ].jpl_burst_id.tolist()
+    assert set(burst_ids_from_pass_1) == set(burst_ids_from_pass_2)
 
 
 def test_near_the_equator() -> None:
@@ -79,6 +92,26 @@ def test_too_many_track_numbers() -> None:
         _ = get_burst_ids_in_mgrs_tiles('22NFF', track_numbers=[1, 2, 3])
 
 
+def test_get_burst_ids_in_mgrs_tile_explicit_track_number() -> None:
+    anti_meridian_tile_id = '01VCK'
+    burst_ids_out = get_burst_ids_in_mgrs_tiles(anti_meridian_tile_id, track_numbers=[1])
+    burst_ids_expected = [
+        'T001-000696-IW1',
+        'T001-000697-IW1',
+        'T001-000697-IW2',
+        'T001-000698-IW1',
+        'T001-000698-IW2',
+        'T001-000699-IW1',
+        'T001-000699-IW2',
+        'T001-000700-IW1',
+        'T001-000700-IW2',
+        'T001-000701-IW1',
+        'T001-000702-IW1',
+        'T001-000703-IW1',
+    ]
+    assert burst_ids_out == burst_ids_expected
+
+
 def test_no_mgrs_coverage() -> None:
     with pytest.raises(NoMGRSCoverage):
         # point in the Atlantic Ocean
@@ -91,3 +124,29 @@ def test_empty_errors() -> None:
 
     with pytest.raises(ValueError, match='No LUT data found for MGRS tile ids foo, bar'):
         _ = get_lut_by_mgrs_tile_ids(['foo', 'bar'])
+
+
+def test_get_mgrs_tiles_overlapping_geometry() -> None:
+    # unique mgrs tile over Wax Lake, Louisiana
+    point = Point(-91.45, 29.5)
+
+    df_mgrs = get_mgrs_tiles_overlapping_geometry(point)
+
+    assert df_mgrs.columns.tolist() == ['mgrs_tile_id', 'utm_epsg', 'utm_wkt', 'geometry']
+    assert df_mgrs.shape[0] == 1
+    assert df_mgrs.mgrs_tile_id.tolist() == ['15RXN']
+
+
+def test_mgrs_tile_track_mismatch() -> None:
+    with pytest.raises(ValueError, match='Mismatch - no LUT data found for MGRS tile ids 15RXN and track numbers 1.'):
+        _ = get_burst_ids_in_mgrs_tiles('15RXN', track_numbers=[1])
+
+
+def test_blacklist_mgrs_tiles() -> None:
+    df_mgrs_all = get_mgrs_table()
+    df_mgrs_lut = get_mgrs_burst_lut()
+    lut_mgrs_tiles = df_mgrs_lut.mgrs_tile_id.unique().tolist()
+    MGRS_TILES_NOT_IN_DIST_S1 = [
+        tile_id for tile_id in df_mgrs_all.mgrs_tile_id.unique().tolist() if tile_id not in lut_mgrs_tiles
+    ]
+    assert set(BLACKLISTED_MGRS_TILE_IDS) == set(MGRS_TILES_NOT_IN_DIST_S1)

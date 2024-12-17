@@ -2,9 +2,11 @@ from datetime import datetime, timedelta
 
 import geopandas as gpd
 import pandas as pd
+from pandera import check_input
 from tqdm import tqdm
 
 from dist_s1_enumerator.asf import get_rtc_s1_temporal_group_metadata
+from dist_s1_enumerator.data_models import RTC_S1_SCHEMA
 from dist_s1_enumerator.mgrs_burst_data import get_lut_by_mgrs_tile_ids
 
 
@@ -84,6 +86,7 @@ def enumerate_one_dist_s1_product(
     return df_rtc_product
 
 
+@check_input(RTC_S1_SCHEMA, 0)
 def enumerate_dist_s1_products(
     df_rtc_ts: gpd.GeoDataFrame,
     mgrs_tile_ids: list[str],
