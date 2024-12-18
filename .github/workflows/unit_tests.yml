@@ -33,5 +33,5 @@ jobs:
       - name: Pytest in conda environment
         shell: bash -l {0}
         run: |
-          python -m pip --no-deps install .
+          python -m pip install --no-deps .
           pytest . -m 'not integration'
