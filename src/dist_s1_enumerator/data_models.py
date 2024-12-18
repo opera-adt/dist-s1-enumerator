@@ -1,9 +1,9 @@
 import geopandas as gpd
-import pandas as pd
-from pandera import Column, DataFrameSchema
+from pandera import Column, DataFrameSchema, Timestamp
+from pandera.engines.pandas_engine import DateTime
 
 
-BURST_SCHEMA = DataFrameSchema(
+burst_schema = DataFrameSchema(
     {
         'jpl_burst_id': Column(str, required=True),
         'track_number': Column(int, required=False),
@@ -13,7 +13,7 @@ BURST_SCHEMA = DataFrameSchema(
     }
 )
 
-MGRS_TILE_SCHEMA = DataFrameSchema(
+mgrs_tile_schema = DataFrameSchema(
     {
         'mgrs_tile_id': Column(str, required=True),
         'utm_epsg': Column(int, required=True),
@@ -22,24 +22,32 @@ MGRS_TILE_SCHEMA = DataFrameSchema(
     }
 )
 
-RTC_S1_SCHEMA = DataFrameSchema(
+rtc_s1_schema = DataFrameSchema(
     {
         'opera_id': Column(str, required=True),
         'jpl_burst_id': Column(str, required=True),
-        'acq_dt': Column(pd.Timestamp, required=True),
+        'acq_dt': Column(DateTime(tz='UTC'), required=True),
+        'acq_date': Column(DateTime(tz='UTC'), required=False),
         'polarizations': Column(str, required=True),
         'track_number': Column(int, required=True),
         'url_crosspol': Column(str, required=True),
         'url_copol': Column(str, required=True),
-        'loc_path_crosspol': Column(str, required=False),
-        'loc_path_copol': Column(str, required=False),
-        'acq_group_id_within_mgrs_tile': Column(int, required=False),
-        'mgrs_tile_id': Column(str, required=False),
         'geometry': Column('geometry', required=True),
     }
 )
 
-BURST_MGRS_LUT_SCHEMA = DataFrameSchema(
+dist_s1_input_schema = rtc_s1_schema.add_columns(
+    {
+        'acq_group_id_within_mgrs_tile': Column(int, required=False),
+        'track_token': Column(str, required=True),
+        'mgrs_tile_id': Column(str, required=False),
+        'product_id': Column(str, required=False),
+        'pass_id': Column(str, required=False),
+        'geometry': Column('geometry', required=True),
+    }
+)
+
+burst_mgrs_lut_schema = DataFrameSchema(
     {
         'jpl_burst_id': Column(str, required=True),
         'mgrs_tile_id': Column(str, required=True),

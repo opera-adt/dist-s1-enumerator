@@ -6,7 +6,7 @@ from pandera import check_input
 from tqdm import tqdm
 
 from dist_s1_enumerator.asf import get_rtc_s1_temporal_group_metadata
-from dist_s1_enumerator.data_models import RTC_S1_SCHEMA
+from dist_s1_enumerator.data_models import dist_s1_input_schema, reorder_columns
 from dist_s1_enumerator.mgrs_burst_data import get_lut_by_mgrs_tile_ids
 
 
@@ -69,6 +69,9 @@ def enumerate_one_dist_s1_product(
         n_images_per_burst=1,
     )
 
+    if df_rtc_post.empty:
+        raise ValueError(f'No RTC-S1 post-images found for track {track_number} in MGRS tile {mgrs_tile_id}.')
+
     post_date_min = df_rtc_post.acq_dt.min()
     lookback_final = delta_window_days + delta_lookback_days
     df_rtc_pre = get_rtc_s1_temporal_group_metadata(
@@ -79,14 +82,19 @@ def enumerate_one_dist_s1_product(
         n_images_per_burst=max_pre_imgs_per_burst,
     )
 
+    if df_rtc_pre.empty:
+        raise ValueError(f'No RTC-S1 pre-images found for track {track_number} in MGRS tile {mgrs_tile_id}.')
+
     df_rtc_pre['input_category'] = 'pre'
     df_rtc_post['input_category'] = 'post'
 
     df_rtc_product = pd.concat([df_rtc_pre, df_rtc_post], axis=0).reset_index(drop=True)
+    dist_s1_input_schema.validate(df_rtc_product)
+    df_rtc_product = reorder_columns(df_rtc_product, dist_s1_input_schema)
     return df_rtc_product
 
 
-@check_input(RTC_S1_SCHEMA, 0)
+@check_input(dist_s1_input_schema, 0)
 def enumerate_dist_s1_products(
     df_rtc_ts: gpd.GeoDataFrame,
     mgrs_tile_ids: list[str],

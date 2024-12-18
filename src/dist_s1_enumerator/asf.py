@@ -4,10 +4,11 @@ from warnings import warn
 import asf_search as asf
 import geopandas as gpd
 import pandas as pd
+from pandera import check_input
 from rasterio.crs import CRS
 from shapely.geometry import shape
 
-from dist_s1_enumerator.data_models import RTC_S1_SCHEMA, reorder_columns
+from dist_s1_enumerator.data_models import reorder_columns, rtc_s1_schema
 from dist_s1_enumerator.mgrs_burst_data import get_burst_ids_in_mgrs_tiles, get_lut_by_mgrs_tile_ids
 
 
@@ -51,7 +52,7 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
         {
             'opera_id': p['sceneName'],
             'acq_dt': pd.to_datetime(p['startTime']),
-            'polarization': '+'.join(p['polarization']),
+            'polarizations': polarizations,
             'url_crosspol': p['url'],
             'url_copol': p['url'].replace(f'_{crosspol}.tif', f'_{copol}.tif'),
             'track_number': p['pathNumber'],
@@ -63,7 +64,7 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
 
     # Ensure dual polarization
     df_rtc['jpl_burst_id'] = df_rtc['opera_id'].map(lambda bid: bid.split('_')[3])
-    df_rtc = df_rtc[df_rtc.polarization == polarizations].reset_index(drop=True)
+    df_rtc = df_rtc[df_rtc.polarizations == polarizations].reset_index(drop=True)
 
     # Sort by burst_id and acquisition date
     df_rtc = df_rtc.sort_values(by=['jpl_burst_id', 'acq_dt']).reset_index(drop=True)
@@ -72,9 +73,6 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     df_rtc['dedup_id'] = df_rtc.opera_id.map(lambda id_: '_'.join(id_.split('_')[:5]))
     df_rtc = df_rtc.drop_duplicates(subset=['dedup_id']).reset_index(drop=True)
     df_rtc = df_rtc.drop(columns=['dedup_id'])
-
-    RTC_S1_SCHEMA.validate(df_rtc)
-    df_rtc = reorder_columns(df_rtc, RTC_S1_SCHEMA)
 
     return df_rtc
 
@@ -168,6 +166,9 @@ def get_rtc_s1_temporal_group_metadata(
     )
     df_rtc.drop(columns=['pass_id'], inplace=True)
 
+    rtc_s1_schema.validate(df_rtc)
+    df_rtc = reorder_columns(df_rtc, rtc_s1_schema)
+
     return df_rtc
 
 
@@ -193,6 +194,7 @@ def get_rtc_s1_ts_metadata_from_mgrs_tiles(
     return df_rtc_ts
 
 
+@check_input(rtc_s1_schema, 0)
 def agg_rtc_metadata_by_burst_id(df_rtc_ts: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     df_agg = (
         df_rtc_ts.groupby('jpl_burst_id')

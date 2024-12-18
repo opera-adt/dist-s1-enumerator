@@ -5,7 +5,7 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point, Polygon
 
-from dist_s1_enumerator.data_models import BURST_MGRS_LUT_SCHEMA, BURST_SCHEMA, MGRS_TILE_SCHEMA, reorder_columns
+from dist_s1_enumerator.data_models import burst_mgrs_lut_schema, burst_schema, mgrs_tile_schema, reorder_columns
 from dist_s1_enumerator.exceptions import NoMGRSCoverage
 
 
@@ -58,8 +58,8 @@ def get_burst_table(burst_ids: list[str] | str | None = None) -> gpd.GeoDataFram
     if df.empty:
         burst_ids_str = ', '.join(map(str, burst_ids))
         raise ValueError(f'No burst data found for {burst_ids_str}.')
-    BURST_SCHEMA.validate(df)
-    df = reorder_columns(df, BURST_SCHEMA)
+    burst_schema.validate(df)
+    df = reorder_columns(df, burst_schema)
     return df.reset_index(drop=True)
 
 
@@ -67,8 +67,8 @@ def get_burst_table(burst_ids: list[str] | str | None = None) -> gpd.GeoDataFram
 def get_mgrs_burst_lut() -> gpd.GeoDataFrame:
     parquet_path = get_mgrs_burst_lut_path()
     df = pd.read_parquet(parquet_path)
-    BURST_MGRS_LUT_SCHEMA.validate(df)
-    df = reorder_columns(df, BURST_MGRS_LUT_SCHEMA)
+    burst_mgrs_lut_schema.validate(df)
+    df = reorder_columns(df, burst_mgrs_lut_schema)
     return df.reset_index(drop=True)
 
 
@@ -81,8 +81,8 @@ def get_lut_by_mgrs_tile_ids(mgrs_tile_ids: str | list[str]) -> gpd.GeoDataFrame
     if df_mgrs_burst_lut.empty:
         mgrs_tile_ids_str = ', '.join(map(str, mgrs_tile_ids))
         raise ValueError(f'No LUT data found for MGRS tile ids {mgrs_tile_ids_str}.')
-    BURST_MGRS_LUT_SCHEMA.validate(df_mgrs_burst_lut)
-    df_mgrs_burst_lut = reorder_columns(df_mgrs_burst_lut, BURST_MGRS_LUT_SCHEMA)
+    burst_mgrs_lut_schema.validate(df_mgrs_burst_lut)
+    df_mgrs_burst_lut = reorder_columns(df_mgrs_burst_lut, burst_mgrs_lut_schema)
     return df_mgrs_burst_lut.reset_index(drop=True)
 
 
@@ -90,8 +90,8 @@ def get_lut_by_mgrs_tile_ids(mgrs_tile_ids: str | list[str]) -> gpd.GeoDataFrame
 def get_mgrs_table() -> gpd.GeoDataFrame:
     path = get_mgrs_data_path()
     df_mgrs = gpd.read_parquet(path)
-    MGRS_TILE_SCHEMA.validate(df_mgrs)
-    df_mgrs = reorder_columns(df_mgrs, MGRS_TILE_SCHEMA)
+    mgrs_tile_schema.validate(df_mgrs)
+    df_mgrs = reorder_columns(df_mgrs, mgrs_tile_schema)
     return df_mgrs
 
 
@@ -103,8 +103,8 @@ def get_mgrs_tiles_overlapping_geometry(geometry: Polygon | Point) -> gpd.GeoDat
             'We only have MGRS tiles that overlap with DIST-HLS products (this is slightly less than Sentinel-2). '
         )
     df_mgrs_overlapping = df_mgrs[ind].reset_index(drop=True)
-    MGRS_TILE_SCHEMA.validate(df_mgrs_overlapping)
-    df_mgrs_overlapping = reorder_columns(df_mgrs_overlapping, MGRS_TILE_SCHEMA)
+    mgrs_tile_schema.validate(df_mgrs_overlapping)
+    df_mgrs_overlapping = reorder_columns(df_mgrs_overlapping, mgrs_tile_schema)
     return df_mgrs_overlapping
 
 
@@ -172,6 +172,6 @@ def get_burst_table_from_mgrs_tiles(mgrs_tile_ids: str | list[str]) -> list:
         how='left',
         on='jpl_burst_id',
     )
-    BURST_SCHEMA.validate(df_burst)
-    df_burst = reorder_columns(df_burst, BURST_SCHEMA)
+    burst_schema.validate(df_burst)
+    df_burst = reorder_columns(df_burst, burst_schema)
     return df_burst.reset_index(drop=True)
