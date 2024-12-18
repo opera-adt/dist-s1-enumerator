@@ -1,5 +1,5 @@
 import geopandas as gpd
-from pandera import Column, DataFrameSchema, Timestamp
+from pandera import Column, DataFrameSchema
 from pandera.engines.pandas_engine import DateTime
 
 
