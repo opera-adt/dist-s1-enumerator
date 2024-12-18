@@ -11,6 +11,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 * Explicit error messages when no data is retrieved from various tables (e.g. burst data, MGRS/burst LUT data, etc.)
 * Suite of tests for enumeration
+   * Unit tests - tests that can be run in a quick fashion and will be run on each PR to main/dev
+   * Integration tests - in our case, hitting the DAAC API and downloading data when necessary; these also include running the Notebooks.
+   * The latter is marked with `@pytest.mark.integration` and will be run on PRs to main (i.e. release PRs)
 * Schema with Pandera to explicitly define and validate columns and their types
 
 ## Fixed
