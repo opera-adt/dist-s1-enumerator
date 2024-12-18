@@ -22,6 +22,7 @@ dependencies:
  - requests
  - isort
  - ruff
+ - papermill
  - shapely
  - pandas
  - tqdm
