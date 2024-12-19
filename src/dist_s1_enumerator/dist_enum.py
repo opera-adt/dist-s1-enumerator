@@ -5,13 +5,13 @@ import pandas as pd
 from pandera import check_input
 from tqdm import tqdm
 
-from dist_s1_enumerator.asf import get_rtc_s1_temporal_group_metadata
+from dist_s1_enumerator.asf import get_rtc_s1_metadata_from_acq_group
 from dist_s1_enumerator.data_models import dist_s1_input_schema, reorder_columns, rtc_s1_schema
 
 
 def enumerate_one_dist_s1_product(
     mgrs_tile_id: str,
-    track_number: int,
+    track_number: int | list[int],
     post_date: datetime | pd.Timestamp,
     post_date_buffer_days: int = 1,
     max_pre_imgs_per_burst: int = 10,
@@ -21,7 +21,7 @@ def enumerate_one_dist_s1_product(
 ) -> gpd.GeoDataFrame:
     """Enumerate a single product using unique DIST-S1 identifiers.
 
-    The key identifiers are:
+    The product identifiers are:
 
     1. MGRS Tile
     2. Track Number
@@ -61,12 +61,22 @@ def enumerate_one_dist_s1_product(
     if post_date_buffer_days >= 6:
         raise ValueError('post_date_buffer_days must be less than 6 (S1 pass length) - please check available data')
 
+    if isinstance(track_number, int):
+        track_numbers = [track_number]
+    elif isinstance(track_number, list):
+        track_numbers = track_number
+    else:
+        raise TypeError('track_number must be a single integer or a list of integers.')
+
+    if isinstance(mgrs_tile_id, list):
+        raise TypeError('mgrs_tile_id must be a single string; we are enumerating inputs for a single DIST-S1 product.')
+
     if isinstance(post_date, pd.Timestamp):
         post_date = post_date.to_pydatetime()
 
-    df_rtc_post = get_rtc_s1_temporal_group_metadata(
+    df_rtc_post = get_rtc_s1_metadata_from_acq_group(
         [mgrs_tile_id],
-        track_numbers=[track_number],
+        track_numbers=track_numbers,
         start_acq_dt=post_date + timedelta(days=post_date_buffer_days),
         stop_acq_dt=post_date - timedelta(days=post_date_buffer_days),
         # Should take less than 5 minutes for S1 to pass over MGRS tile
@@ -80,9 +90,9 @@ def enumerate_one_dist_s1_product(
     # Add 5 minutes buffer to ensure we don't include post-images in pre-image set.
     post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
     lookback_final = delta_window_days + delta_lookback_days
-    df_rtc_pre = get_rtc_s1_temporal_group_metadata(
+    df_rtc_pre = get_rtc_s1_metadata_from_acq_group(
         [mgrs_tile_id],
-        track_numbers=[track_number],
+        track_numbers=track_numbers,
         start_acq_dt=(post_date_min - timedelta(days=lookback_final)),
         stop_acq_dt=(post_date_min - timedelta(days=delta_lookback_days)),
         n_images_per_burst=max_pre_imgs_per_burst,

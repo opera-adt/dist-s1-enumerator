@@ -12,6 +12,20 @@ from dist_s1_enumerator.data_models import reorder_columns, rtc_s1_resp_schema, 
 from dist_s1_enumerator.mgrs_burst_data import get_burst_ids_in_mgrs_tiles, get_lut_by_mgrs_tile_ids
 
 
+def format_polarization(pol: list | str) -> str:
+    if isinstance(pol, list):
+        if ('VV' in pol) and len(pol) == 2:
+            return 'VV+VH'
+        elif ('HH' in pol) and len(pol) == 2:
+            return 'HH+HV'
+        else:
+            return '+'.join(pol)
+    elif isinstance(pol, str):
+        return pol
+    else:
+        raise TypeError(f'Invalid polarization: {pol}.')
+
+
 def extract_pass_id(acq_dt: pd.Timestamp) -> int:
     reference_date = pd.Timestamp('2014-01-01', tz='UTC')
     return int((acq_dt - reference_date).total_seconds() / 86400 / 6)
@@ -56,19 +70,14 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     burst_ids: str | list[str],
     start_acq_dt: str | datetime = None,
     stop_acq_dt: str | datetime = None,
-    polarizations: str = 'VV+VH',
+    polarizations: str | None = None,
 ) -> gpd.GeoDataFrame:
     """Get ASF RTC burst metadata for a fixed track. The track number is extracted from the burst_ids."""
     if isinstance(burst_ids, str):
         burst_ids = [burst_ids]
 
-    if polarizations not in ['VV+VH', 'HH+HV']:
-        raise ValueError(f'Invalid polarization: {polarizations}. Must be one of: VV+VH, HH+HV.')
-
-    if polarizations == 'VV+VH':
-        polarization_list = ['VV', 'VH']
-    elif polarizations == 'HH+HV':
-        polarization_list = ['HH', 'HV']
+    if (polarizations is not None) and (polarizations not in ['HH+HV', 'VV+VH']):
+        raise ValueError(f'Invalid polarization: {polarizations}. Must be one of: HH+HV, VV+VH, None.')
 
     # make sure JPL syntax is transformed to asf syntax
     burst_ids = [burst_id.upper().replace('-', '_') for burst_id in burst_ids]
@@ -76,36 +85,54 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     resp = asf.search(
         operaBurstID=burst_ids,
         processingLevel='RTC',
-        polarization=polarization_list,
         start=start_acq_dt,
         end=stop_acq_dt,
     )
     if not resp:
-        raise warn('No results - please check burst id and availability.', category=UserWarning)
-        return gpd.GeoDataFrame()
+        warn('No results - please check burst id and availability.', category=UserWarning)
+        return gpd.GeoDataFrame(columns=rtc_s1_resp_schema.columns.keys())
 
     properties = [r.properties for r in resp]
     geometry = [shape(r.geojson()['geometry']) for r in resp]
-    crosspol = polarization_list[0]
-    copol = polarization_list[1]
     properties_f = [
         {
             'opera_id': p['sceneName'],
             'acq_dt': pd.to_datetime(p['startTime']),
-            'polarizations': polarizations,
             'url_crosspol': p['url'],
-            'url_copol': p['url'].replace(f'_{crosspol}.tif', f'_{copol}.tif'),
             'track_number': p['pathNumber'],
+            'polarizations': p['polarization'],
         }
         for p in properties
     ]
 
     df_rtc = gpd.GeoDataFrame(properties_f, geometry=geometry, crs=CRS.from_epsg(4326))
 
+    # polarizations - ensure dual polarization
+    # asf metadata can be ['HH', 'HV'] or 'HH+HV' - reformat to the latter
+    df_rtc['polarizations'] = df_rtc['polarizations'].map(format_polarization)
+    if polarizations is not None:
+        ind_pol = df_rtc['polarizations'] == polarizations
+    else:
+        ind_pol = df_rtc['polarizations'].isin(['HH+HV', 'VV+VH'])
+    if not ind_pol.any():
+        raise ValueError(f'No valid dual polarization images found for {burst_ids}.')
+    # First get all the dual-polarizations images
+    df_rtc = df_rtc[ind_pol].reset_index(drop=True)
+    # Then check all the dual-polarizations are the same (either HH+HV or VV+VH)
+    # TODO: if there are mixtures, can DIST-S1 still be generated assuming they look the same?
+    polarizations_unique = df_rtc['polarizations'].unique().tolist()
+    if len(polarizations_unique) > 1:
+        raise ValueError(
+            f'Mixed dual polarizations found for {burst_ids}. That is, some images are HH+HV and others are VV+HV.'
+        )
+    else:
+        cross_pol, copol = polarizations_unique[0].split('+')
+
+    # Generat copol url
+    df_rtc['url_copol'] = df_rtc['url_crosspol'].map(lambda url: url.replace(f'_{cross_pol}.tif', f'_{copol}.tif'))
+
     # Extract the burst_id from the opera_id
     df_rtc['jpl_burst_id'] = df_rtc['opera_id'].map(lambda bid: bid.split('_')[3])
-    # Ensure dual polarization
-    df_rtc = df_rtc[df_rtc.polarizations == polarizations].reset_index(drop=True)
 
     # pass_id is the integer number of 6 day periods since 2014-01-01
     df_rtc['pass_id'] = df_rtc.acq_dt.map(extract_pass_id)
@@ -121,7 +148,7 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     return df_rtc
 
 
-def get_rtc_s1_temporal_group_metadata(
+def get_rtc_s1_metadata_from_acq_group(
     mgrs_tile_ids: list[str],
     track_numbers: list[int],
     n_images_per_burst: int = 1,
@@ -206,6 +233,7 @@ def get_rtc_s1_ts_metadata_from_mgrs_tiles(
     track_numbers: list[int] = None,
     start_acq_dt: str | datetime = None,
     stop_acq_dt: str | datetime = None,
+    polarizations: str | None = None,
 ) -> gpd.GeoDataFrame:
     """Get the RTC S1 time series for a given MGRS tile and track number."""
     if isinstance(start_acq_dt, str):
@@ -214,12 +242,17 @@ def get_rtc_s1_ts_metadata_from_mgrs_tiles(
         stop_acq_dt = datetime.strptime(stop_acq_dt, '%Y-%m-%d')
 
     burst_ids = get_burst_ids_in_mgrs_tiles(mgrs_tile_ids, track_numbers=track_numbers)
-    df_rtc_ts = get_rtc_s1_ts_metadata_by_burst_ids(burst_ids, start_acq_dt=start_acq_dt, stop_acq_dt=stop_acq_dt)
+    df_rtc_ts = get_rtc_s1_ts_metadata_by_burst_ids(
+        burst_ids, start_acq_dt=start_acq_dt, stop_acq_dt=stop_acq_dt, polarizations=polarizations
+    )
     if df_rtc_ts.empty:
         mgrs_tiles_str = ','.join(mgrs_tile_ids)
-        track_numbers_str = ','.join(map(str, track_numbers))
-        warn(f'No RTC S1 metadata found for track {track_numbers_str} in MGRS tile {mgrs_tiles_str}.')
-        return gpd.GeoDataFrame()
+        msg = f'No RTC S1 metadata found for  MGRS tile {mgrs_tiles_str}.'
+        if track_numbers is not None:
+            track_number_token = '_'.join(map(str, track_numbers))
+            msg += f' Track numbers provided: {track_number_token}.'
+        warn(msg)
+        return gpd.GeoDataFrame(columns=rtc_s1_schema.columns.keys())
 
     df_rtc_ts = append_pass_data(df_rtc_ts, mgrs_tile_ids)
     rtc_s1_schema.validate(df_rtc_ts)

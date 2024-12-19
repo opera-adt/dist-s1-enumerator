@@ -3,7 +3,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from dist_s1_enumerator.asf import (
     agg_rtc_metadata_by_burst_id,
-    get_rtc_s1_temporal_group_metadata,
+    get_rtc_s1_metadata_from_acq_group,
     get_rtc_s1_ts_metadata_from_mgrs_tiles,
 )
 from dist_s1_enumerator.dist_enum import enumerate_dist_s1_products, enumerate_one_dist_s1_product
@@ -44,6 +44,6 @@ __all__ = [
     'get_mgrs_burst_lut_path',
     'get_mgrs_table',
     'get_mgrs_tiles_overlapping_geometry',
-    'get_rtc_s1_temporal_group_metadata',
+    'get_rtc_s1_metadata_from_acq_group',
     'get_rtc_s1_ts_metadata_from_mgrs_tiles',
 ]
