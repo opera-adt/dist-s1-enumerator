@@ -43,7 +43,7 @@ def generate_rtc_s1_local_paths(df_rtc_ts: gpd.GeoDataFrame, data_dir: Path | st
     copol_urls = df_rtc_ts['url_copol'].tolist()
     crosspol_urls = df_rtc_ts['url_crosspol'].tolist()
     track_tokens = df_rtc_ts['track_token'].tolist()
-    date_tokens = df_rtc_ts['acq_date'].dt.date.astype(str).tolist()
+    date_tokens = df_rtc_ts['acq_date_for_mgrs_pass'].tolist()
     mgrs_tokens = df_rtc_ts['mgrs_tile_id'].tolist()
 
     out_paths_copol = _generate_rtc_s1_local_paths(copol_urls, data_dir, track_tokens, date_tokens, mgrs_tokens)

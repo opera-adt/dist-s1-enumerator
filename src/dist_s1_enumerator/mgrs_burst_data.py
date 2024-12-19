@@ -95,6 +95,18 @@ def get_mgrs_table() -> gpd.GeoDataFrame:
     return df_mgrs
 
 
+def get_mgrs_tile_table_by_ids(mgrs_tile_ids: list[str]) -> gpd.GeoDataFrame:
+    df_mgrs = get_mgrs_table()
+    if isinstance(mgrs_tile_ids, str):
+        mgrs_tile_ids = [mgrs_tile_ids]
+    ind = df_mgrs.mgrs_tile_id.isin(mgrs_tile_ids)
+    if not ind.any():
+        mgrs_tile_ids_str = ', '.join(map(str, mgrs_tile_ids))
+        raise ValueError(f'No MGRS tile data found for {mgrs_tile_ids_str}.')
+    df_mgrs_subset = df_mgrs[ind].reset_index(drop=True)
+    return df_mgrs_subset
+
+
 def get_mgrs_tiles_overlapping_geometry(geometry: Polygon | Point) -> gpd.GeoDataFrame:
     df_mgrs = get_mgrs_table()
     ind = df_mgrs.intersects(geometry)

@@ -22,27 +22,39 @@ mgrs_tile_schema = DataFrameSchema(
     }
 )
 
-rtc_s1_schema = DataFrameSchema(
+# Response schema from ASF DAAC API
+rtc_s1_resp_schema = DataFrameSchema(
     {
         'opera_id': Column(str, required=True),
         'jpl_burst_id': Column(str, required=True),
         'acq_dt': Column(DateTime(tz='UTC'), required=True),
-        'acq_date': Column(DateTime(tz='UTC'), required=False),
+        'acq_date_for_mgrs_pass': Column(str, required=False),
         'polarizations': Column(str, required=True),
         'track_number': Column(int, required=True),
+        # Integer number of 6 day periods since 2014-01-01
+        'pass_id': Column(int, required=True),
         'url_crosspol': Column(str, required=True),
         'url_copol': Column(str, required=True),
         'geometry': Column('geometry', required=True),
     }
 )
 
+# Schema for RTC-S1 metadata with MGRS tile and acq group id appended
+# Note: a single burst product may be associated with multiple MGRS tiles and acq group_ids
+rtc_s1_schema = rtc_s1_resp_schema.add_columns(
+    {
+        'mgrs_tile_id': Column(str, required=True),
+        'acq_group_id_within_mgrs_tile': Column(int, required=True),
+        'track_token': Column(str, required=True),
+        'geometry': Column('geometry', required=True),
+    }
+)
+
+# Schema for inputs to dist-s1 workflow
 dist_s1_input_schema = rtc_s1_schema.add_columns(
     {
-        'acq_group_id_within_mgrs_tile': Column(int, required=False),
-        'track_token': Column(str, required=True),
-        'mgrs_tile_id': Column(str, required=False),
-        'product_id': Column(str, required=False),
-        'pass_id': Column(str, required=False),
+        'input_category': Column(str, required=True),
+        'product_id': Column(int, required=False),
         'geometry': Column('geometry', required=True),
     }
 )
