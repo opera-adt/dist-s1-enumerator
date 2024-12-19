@@ -15,6 +15,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
    * Integration tests - in our case, hitting the DAAC API and downloading data when necessary; these also include running the Notebooks.
    * The latter is marked with `@pytest.mark.integration` and will be run on PRs to main (i.e. release PRs)
 * Schema with Pandera to explicitly define and validate columns and their types
+* Flexibility to retrieve either HH+HV or VV+VH or target one particular dual polarization type.
 
 ## Fixed
 * `epsg` (now `utm_epsg`) was a string (with extra spacing) and now it's an integer
