@@ -65,3 +65,36 @@ Thus, it is important to specify the date in addition to the track number.
 It is also important to note that we are assuming the selection of pre-images (once a post-image set is selected) is fixed.
 Indeed, varying a baseline of pre-images by which to measure disturbance will alter the final DIST-S1 product.
 While we can modify strategies of pre-image selection using this library, it is not highlighted here. 
+
+
+# Testing
+
+For the test suite:
+
+1. Install `pytest` via `conda-forge`
+2. Run `pytest tests`
+
+There are two category of tests: unit tests and integration tests. The former can be run using `pytest tests -m 'not integration'` and similarly the latter with `pytest tests -m 'integration'`. The intgeration tests require internet access and earthdata credentials setup correctly (as described above). The unit tests mock the necessary data inputs.
+
+# Contributing
+
+We welcome contributions to this open-source package. To do so:
+
+1. Create an GitHub issue ticket desrcribing what changes you need (e.g. issue-1)
+2. Fork this repo
+3. Make your modifications in your own fork
+4. Make a pull-request (PR) in this repo with the code in your fork and tag the repo owner or a relevant contributor.
+
+We use `ruff` and associated linting packages to ensure some basic code quality (see the `environment.yml`). These will be checked for each commit in a PR. Try to write tests wherever possible.
+
+# Support
+
+1. Create an GitHub issue ticket desrcribing what changes you would like to see or to report a bug.
+2. We will work on solving this issue (hopefully with you).
+
+# Acknowledgements
+
+See the [LICENSE](LICENSE.txt) file for copyright information.
+
+This package was developed as part of the Observational Products for End-Users from Remote Sensing Analysis ([OPERA](https://www.jpl.nasa.gov/go/opera/)) project.  This work was originally carried out at the Jet Propulsion Laboratory, California Institute of Technology, under a contract with the National Aeronautics and Space Administration (80NM0018D0004). 
+Copyright 2024 by the California Institute of Technology. United States Government Sponsorship acknowledged.
