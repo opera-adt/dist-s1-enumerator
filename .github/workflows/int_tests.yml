@@ -1,6 +1,5 @@
 name: Integration Tests
 
-
 on:
   workflow_dispatch:
   push:
