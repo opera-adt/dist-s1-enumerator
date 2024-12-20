@@ -16,6 +16,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
    * The latter is marked with `@pytest.mark.integration` and will be run on PRs to main (i.e. release PRs)
 * Schema with Pandera to explicitly define and validate columns and their types
 * Flexibility to retrieve either HH+HV or VV+VH or target one particular dual polarization type (currently does not support mixtures of dual polarized data).
+* Expose the primary functions via the `__init__.py` file
+* Updated environment.yml for Papermill tests
 
 ## Fixed
 * `epsg` (now `utm_epsg`) was a string (with extra spacing) and now it's an integer
