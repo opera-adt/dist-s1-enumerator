@@ -1,6 +1,6 @@
 import pytest
 
-from dist_s1_enumerator.asf import get_rtc_s1_ts_metadata_by_burst_ids, append_pass_data
+from dist_s1_enumerator.asf import append_pass_data, get_rtc_s1_ts_metadata_by_burst_ids
 
 
 @pytest.mark.integration
