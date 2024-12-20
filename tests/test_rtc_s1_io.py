@@ -1,6 +1,9 @@
 from pathlib import Path
 
-from dist_s1_enumerator.rtc_s1_io import generate_rtc_s1_local_paths
+import pytest
+
+from dist_s1_enumerator.asf import append_pass_data, get_rtc_s1_ts_metadata_by_burst_ids
+from dist_s1_enumerator.rtc_s1_io import generate_rtc_s1_local_paths, localize_rtc_s1_ts
 
 
 def test_generate_rtc_s1_dst_paths() -> None:
@@ -31,3 +34,26 @@ def test_generate_rtc_s1_dst_paths() -> None:
         ),
     ]
     assert out_paths == expected_paths
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    'burst_id, mgrs_tile_id',
+    [
+        # Bay area bursts (one ascending, one descending)
+        ('T115-245714-IW1', '10SEG'),
+        ('T035-073251-IW2', '10SEG'),
+    ],
+)
+def test_lookup_and_download_rtc(burst_id: str, mgrs_tile_id: str, tmpdir: Path) -> None:
+    df_rtc_resp = get_rtc_s1_ts_metadata_by_burst_ids([burst_id], start_acq_dt='2024-01-01', stop_acq_dt='2024-01-12')
+    df_rtc_formatted = append_pass_data(df_rtc_resp, [mgrs_tile_id])
+    assert not df_rtc_formatted.empty
+    assert df_rtc_formatted.shape[0] == 1
+
+    # Download the data
+    localize_rtc_s1_ts(df_rtc_formatted, tmpdir)
+
+    # Check that the data was downloaded and a directory was created for the track number
+    track_number = int(burst_id.split('-')[0][1:])
+    assert (tmpdir / mgrs_tile_id / track_number).exists()
