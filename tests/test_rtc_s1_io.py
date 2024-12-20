@@ -40,9 +40,10 @@ def test_generate_rtc_s1_dst_paths() -> None:
 @pytest.mark.parametrize(
     'burst_id, mgrs_tile_id',
     [
-        # Bay area bursts (one ascending, one descending)
+        # Bay area bursts (one ascending, one descending) - bursts are in overlapping mgrs tiles
+        # so tiles could be swapped; use only one tile so that no too much downloading done!
         ('T115-245714-IW1', '10SEG'),
-        ('T035-073251-IW2', '10SEG'),
+        ('T035-073251-IW2', '10SEH'),
     ],
 )
 def test_lookup_and_download_rtc(burst_id: str, mgrs_tile_id: str, tmpdir: Path) -> None:
