@@ -22,7 +22,8 @@ notebooks_paths = [(notebooks_dir / filename).resolve() for filename in notebook
 def test_notebook(notebook_path: str, change_local_dir: Callable[[Path], Path], test_dir: Path) -> None:
     # Changes the working directory to the test directory
     change_local_dir(test_dir)
-    tmp_dir = Path(__file__).parent / 'tmp'
+
+    tmp_dir = test_dir / 'tmp'
     tmp_dir.mkdir(parents=True, exist_ok=True)
     if not notebook_path:
         pytest.skip(f'Notebook {notebook_path} not found in notebooks directory')
@@ -40,7 +41,7 @@ def test_notebook(notebook_path: str, change_local_dir: Callable[[Path], Path], 
     # cleanup
     cleanup_dirs = [
         tmp_dir,
-        # output directory of notebooks
-        test_dir / 'out',
+        # # output directory of 'A__Staging_Inputs_for_One_MGRS_Tile.ipynb'
+        # test_dir / 'out',
     ]
-    [shutil.rmtree(str(dir.resolve())) for dir in cleanup_dirs]
+    [shutil.rmtree(dir) for dir in cleanup_dirs]
