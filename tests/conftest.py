@@ -1,10 +1,12 @@
 import os
 from collections.abc import Callable, Generator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 
 
+@contextmanager
 @pytest.fixture
 def change_local_dir() -> Generator[Callable[[Path], Path], None, None]:
     """Fixture to temporarily change the working directory."""
