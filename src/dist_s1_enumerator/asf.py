@@ -74,7 +74,8 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
 ) -> gpd.GeoDataFrame:
     """Wrap/format the ASF search API for RTC-S1 metadata search. All searches go through this function.
 
-    Requires search data to be dual polarized data of the same type (if not specified, will get all search results of the available type).
+    Requires search data to be dual polarized data of the same type (if not specified, will get all search results
+    of the available type).
 
     If dual polarized data is mixed (that is there are HH+HV and VV+VH), will raise an error.
     """
