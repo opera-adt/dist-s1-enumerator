@@ -11,6 +11,10 @@ from dist_s1_enumerator.exceptions import NoMGRSCoverage
 
 DATA_DIR = Path(__file__).resolve().parent / 'data'
 
+# CONSTANTS FOR REFERENCE
+MAX_BURSTS_IN_MGRS_TILE = 450
+MAX_MGRS_TILES_INTERSECTING_BURST = 8
+
 # Tiles that are in DIST-HLS but not in DIST-S1
 # due to coverage
 BLACKLISTED_MGRS_TILE_IDS = [

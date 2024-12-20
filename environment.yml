@@ -4,26 +4,27 @@ dependencies:
  - pip
  - asf_search
  - backoff
+ - contextily
  - flake8
  - flake8-blind-except
  - flake8-builtins
  - flake8-import-order
  - geopandas
- - contextily
+ - ipykernel
+ - isort
  - jupyterlab
  - matplotlib
  - numpy
  - pandas
+ - pandas
  - pandera
+ - papermill
  - pyarrow
  - pytest
  - pytest-cov
+ - pytest-mock
  - rasterio
  - requests
- - isort
  - ruff
- - papermill
  - shapely
- - pandas
  - tqdm
- - pytest-mock

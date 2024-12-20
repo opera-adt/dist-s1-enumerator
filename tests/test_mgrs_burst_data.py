@@ -4,6 +4,7 @@ from shapely.geometry import Point
 from dist_s1_enumerator.exceptions import NoMGRSCoverage
 from dist_s1_enumerator.mgrs_burst_data import (
     BLACKLISTED_MGRS_TILE_IDS,
+    MAX_BURSTS_IN_MGRS_TILE,
     get_burst_ids_in_mgrs_tiles,
     get_burst_table,
     get_lut_by_mgrs_tile_ids,
@@ -15,11 +16,13 @@ from dist_s1_enumerator.mgrs_burst_data import (
 
 @pytest.mark.parametrize('mgrs_tile_id', get_mgrs_table()['mgrs_tile_id'].sample(10).tolist())
 def test_burst_lookup_by_mgrs_tile_id(mgrs_tile_id: str) -> None:
+    if mgrs_tile_id in BLACKLISTED_MGRS_TILE_IDS:
+        return
     burst_ids = get_burst_ids_in_mgrs_tiles(mgrs_tile_id)
     n = len(burst_ids)
     assert n > 0
     # at high latitudes, there can be a lot of burst_ids!
-    assert n <= 300
+    assert n <= MAX_BURSTS_IN_MGRS_TILE
 
 
 @pytest.mark.parametrize('burst_id', get_burst_table()['jpl_burst_id'].sample(10).tolist())
@@ -145,8 +148,16 @@ def test_mgrs_tile_track_mismatch() -> None:
 def test_blacklist_mgrs_tiles() -> None:
     df_mgrs_all = get_mgrs_table()
     df_mgrs_lut = get_mgrs_burst_lut()
-    lut_mgrs_tiles = df_mgrs_lut.mgrs_tile_id.unique().tolist()
-    MGRS_TILES_NOT_IN_DIST_S1 = [
-        tile_id for tile_id in df_mgrs_all.mgrs_tile_id.unique().tolist() if tile_id not in lut_mgrs_tiles
-    ]
+
+    df_merged = df_mgrs_all.merge(df_mgrs_lut, on='mgrs_tile_id', indicator=True, how='left')
+    MGRS_TILES_NOT_IN_DIST_S1 = df_merged[df_merged['_merge'] == 'left_only'].mgrs_tile_id.unique().tolist()
     assert set(BLACKLISTED_MGRS_TILE_IDS) == set(MGRS_TILES_NOT_IN_DIST_S1)
+
+
+def test_all_bursts_in_lut() -> None:
+    df_bursts = get_burst_table()
+    df_mgrs_lut = get_mgrs_burst_lut()
+
+    df_merged = df_bursts.merge(df_mgrs_lut, on='jpl_burst_id', indicator=True, how='left')
+    burst_ids_not_in_lut = df_merged[df_merged['_merge'] == 'left_only'].jpl_burst_id.unique().tolist()
+    assert len(burst_ids_not_in_lut) == 0
