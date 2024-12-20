@@ -1,3 +1,4 @@
+import shutil
 from collections.abc import Callable
 from pathlib import Path
 
@@ -33,6 +34,9 @@ def test_notebook(notebook_path: str, change_local_dir: Callable[[Path], Path], 
     )
 
     # cleanup
-    # for item in tmp_dir.iterdir():
-    #     item.unlink()
-    # tmp_dir.rmdir()
+    cleanup_dirs = [
+        tmp_dir,
+        # output directory of notebooks
+        test_dir / 'out',
+    ]
+    [shutil.rmtree(str(dir.resolve())) for dir in cleanup_dirs]
