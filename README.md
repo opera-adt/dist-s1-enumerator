@@ -74,7 +74,9 @@ For the test suite:
 1. Install `pytest` via `conda-forge`
 2. Run `pytest tests`
 
-There are two category of tests: unit tests and integration tests. The former can be run using `pytest tests -m 'not integration'` and similarly the latter with `pytest tests -m 'integration'`. The intgeration tests require internet access and earthdata credentials setup correctly (as described above). The unit tests mock the necessary data inputs.
+There are two category of tests: unit tests and integration tests. The former can be run using `pytest tests -m 'not integration'` and similarly the latter with `pytest tests -m 'integration'`. The intgeration tests are those that can be integrated into the DAAC data access workflows and thus require internet access with earthdata credentials setup correctly (as described above). The unit tests mock the necessary data inputs.
+The integration tests that are the most time consuming are represented by the notebooks and are run only upon a release PR.
+These notebook tests are tagged with `notebooks` and can be excluded from the other tests with `pytest tests -m 'not notebooks'`.
 
 # Contributing
 
