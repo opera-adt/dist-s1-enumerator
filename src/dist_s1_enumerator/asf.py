@@ -98,14 +98,25 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
         {
             'opera_id': p['sceneName'],
             'acq_dt': pd.to_datetime(p['startTime']),
-            'url_crosspol': p['url'],
             'track_number': p['pathNumber'],
             'polarizations': p['polarization'],
+            'all_urls': [p['url']] + p['additionalUrls'],
         }
         for p in properties
     ]
 
     df_rtc = gpd.GeoDataFrame(properties_f, geometry=geometry, crs=CRS.from_epsg(4326))
+
+    # Extract the burst_id from the opera_id
+    df_rtc['jpl_burst_id'] = df_rtc['opera_id'].map(lambda bid: bid.split('_')[3])
+
+    # pass_id is the integer number of 6 day periods since 2014-01-01
+    df_rtc['pass_id'] = df_rtc.acq_dt.map(extract_pass_id)
+
+    # Remove duplicates from time series
+    df_rtc['dedup_id'] = df_rtc.opera_id.map(lambda id_: '_'.join(id_.split('_')[:5]))
+    df_rtc = df_rtc.drop_duplicates(subset=['dedup_id']).reset_index(drop=True)
+    df_rtc = df_rtc.drop(columns=['dedup_id'])
 
     # polarizations - ensure dual polarization
     # asf metadata can be ['HH', 'HV'] or 'HH+HV' - reformat to the latter
@@ -126,21 +137,24 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
             f'Mixed dual polarizations found for {burst_ids}. That is, some images are HH+HV and others are VV+HV.'
         )
     else:
-        cross_pol, copol = polarizations_unique[0].split('+')
+        # Either HH+HV or VV+VH
+        copol, crosspol = polarizations_unique[0].split('+')
 
-    # Generat copol url
-    df_rtc['url_copol'] = df_rtc['url_crosspol'].map(lambda url: url.replace(f'_{cross_pol}.tif', f'_{copol}.tif'))
+    def get_url_by_polarization(prod_urls: list[str], polarization_token: str) -> list[str]:
+        possible_urls = [url for url in prod_urls if f'_{polarization_token}.tif' == url[-7:]]
+        if len(possible_urls) == 0:
+            raise ValueError(f'No {polarization_token} urls found')
+        if len(possible_urls) > 1:
+            breakpoint()
+            raise ValueError(f'Multiple {polarization_token} urls found')
+        return possible_urls[0]
 
-    # Extract the burst_id from the opera_id
-    df_rtc['jpl_burst_id'] = df_rtc['opera_id'].map(lambda bid: bid.split('_')[3])
+    url_copol = df_rtc.all_urls.map(lambda urls_for_prod: get_url_by_polarization(urls_for_prod, copol))
+    url_crosspol = df_rtc.all_urls.map(lambda urls_for_prod: get_url_by_polarization(urls_for_prod, crosspol))
 
-    # pass_id is the integer number of 6 day periods since 2014-01-01
-    df_rtc['pass_id'] = df_rtc.acq_dt.map(extract_pass_id)
-
-    # Remove duplicates from time series
-    df_rtc['dedup_id'] = df_rtc.opera_id.map(lambda id_: '_'.join(id_.split('_')[:5]))
-    df_rtc = df_rtc.drop_duplicates(subset=['dedup_id']).reset_index(drop=True)
-    df_rtc = df_rtc.drop(columns=['dedup_id'])
+    df_rtc['url_copol'] = url_copol
+    df_rtc['url_crosspol'] = url_crosspol
+    df_rtc = df_rtc.drop(columns=['all_urls'])
 
     rtc_s1_resp_schema.validate(df_rtc)
     df_rtc = reorder_columns(df_rtc, rtc_s1_resp_schema)
