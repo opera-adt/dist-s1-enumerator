@@ -49,7 +49,7 @@ def mock_response_from_asf_daac(
 @pytest.mark.parametrize(
     'mgrs_tile_ids, track_numbers',
     [
-        (['45QZE'], [114]),  # Waxlake delta, VV+VH
+        (['15RXN'], [63]),  # Waxlake delta, VV+VH
         (['22WFD'], None),  # greenland, all tracks, and HH+HV
         (['11SLT', '11SLU', '11SMT'], None),  # multiple MGRS tiles over Los Angeles
     ],
