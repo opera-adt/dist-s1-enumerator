@@ -28,7 +28,7 @@ jobs:
           password: ${{ secrets.EARTHDATA_PASSWORD }}
 
       - uses: mamba-org/setup-micromamba@v2
-          with:
+        with:
           environment-name: dist-s1-enumerator
           environment-file: environment.yml
           extra-specs: |
