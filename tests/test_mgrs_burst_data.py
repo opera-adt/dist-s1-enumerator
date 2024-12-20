@@ -4,6 +4,7 @@ from shapely.geometry import Point
 from dist_s1_enumerator.exceptions import NoMGRSCoverage
 from dist_s1_enumerator.mgrs_burst_data import (
     BLACKLISTED_MGRS_TILE_IDS,
+    MAX_BURSTS_IN_MGRS_TILE,
     get_burst_ids_in_mgrs_tiles,
     get_burst_table,
     get_lut_by_mgrs_tile_ids,
@@ -19,7 +20,7 @@ def test_burst_lookup_by_mgrs_tile_id(mgrs_tile_id: str) -> None:
     n = len(burst_ids)
     assert n > 0
     # at high latitudes, there can be a lot of burst_ids!
-    assert n <= 300
+    assert n <= MAX_BURSTS_IN_MGRS_TILE
 
 
 @pytest.mark.parametrize('burst_id', get_burst_table()['jpl_burst_id'].sample(10).tolist())
