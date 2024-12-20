@@ -148,8 +148,16 @@ def test_mgrs_tile_track_mismatch() -> None:
 def test_blacklist_mgrs_tiles() -> None:
     df_mgrs_all = get_mgrs_table()
     df_mgrs_lut = get_mgrs_burst_lut()
-    lut_mgrs_tiles = df_mgrs_lut.mgrs_tile_id.unique().tolist()
-    MGRS_TILES_NOT_IN_DIST_S1 = [
-        tile_id for tile_id in df_mgrs_all.mgrs_tile_id.unique().tolist() if tile_id not in lut_mgrs_tiles
-    ]
+
+    df_merged = df_mgrs_all.merge(df_mgrs_lut, on='mgrs_tile_id', indicator=True, how='left')
+    MGRS_TILES_NOT_IN_DIST_S1 = df_merged[df_merged['_merge'] == 'left_only'].mgrs_tile_id.unique().tolist()
     assert set(BLACKLISTED_MGRS_TILE_IDS) == set(MGRS_TILES_NOT_IN_DIST_S1)
+
+
+def test_all_bursts_in_lut() -> None:
+    df_bursts = get_burst_table()
+    df_mgrs_lut = get_mgrs_burst_lut()
+
+    df_merged = df_bursts.merge(df_mgrs_lut, on='jpl_burst_id', indicator=True, how='left')
+    burst_ids_not_in_lut = df_merged[df_merged['_merge'] == 'left_only'].jpl_burst_id.unique().tolist()
+    assert len(burst_ids_not_in_lut) == 0
