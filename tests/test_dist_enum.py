@@ -53,6 +53,7 @@ def mock_response_from_asf_daac(
         (['15RXN'], [63]),  # Waxlake delta, VV+VH
         (['22WFD'], None),  # greenland, all tracks, and HH+HV
         (['11SLT', '11SLU', '11SMT'], None),  # multiple MGRS tiles over Los Angeles
+        (['01UBT'], None),  # Aleutian Chain at the antimeridian
     ],
 )
 def test_dist_enum_default(mgrs_tile_ids: list[str], track_numbers: list[int] | None, mocker: MockerFixture) -> None:
