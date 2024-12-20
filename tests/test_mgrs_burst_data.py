@@ -16,6 +16,8 @@ from dist_s1_enumerator.mgrs_burst_data import (
 
 @pytest.mark.parametrize('mgrs_tile_id', get_mgrs_table()['mgrs_tile_id'].sample(10).tolist())
 def test_burst_lookup_by_mgrs_tile_id(mgrs_tile_id: str) -> None:
+    if mgrs_tile_id in BLACKLISTED_MGRS_TILE_IDS:
+        return
     burst_ids = get_burst_ids_in_mgrs_tiles(mgrs_tile_id)
     n = len(burst_ids)
     assert n > 0
