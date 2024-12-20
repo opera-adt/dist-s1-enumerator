@@ -57,4 +57,4 @@ def test_lookup_and_download_rtc(burst_id: str, mgrs_tile_id: str, tmpdir: Path)
 
     # Check that the data was downloaded and a directory was created for the track number
     track_number = int(burst_id.split('-')[0][1:])
-    assert (tmpdir / mgrs_tile_id / track_number).exists()
+    assert (Path(tmpdir) / mgrs_tile_id / track_number).exists()
