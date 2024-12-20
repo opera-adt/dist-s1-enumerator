@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 
 import geopandas as gpd
@@ -112,8 +113,18 @@ def test_dist_enum_default(mgrs_tile_ids: list[str], track_numbers: list[int] | 
 
     mocker.patch('dist_s1_enumerator.asf.get_rtc_s1_ts_metadata_by_burst_ids', side_effect=side_effects)
 
+    # PRODS_TO_TEST = 25
+    # indices = random.sample(range(len(product_ids)), PRODS_TO_TEST)
+    # product_ids = [product_ids[i] for i in indices]
+    # mgrs_tile_ids_post = [mgrs_tile_ids_post[i] for i in indices]
+    # post_dates = [post_dates[i] for i in indices]
+    # track_numbers_post_lst = [track_numbers_post_lst[i] for i in indices]
+
     for product_id, mgrs_tile_id, post_date, track_numbers_post in zip(
-        product_ids, mgrs_tile_ids_post, post_dates, track_numbers_post_lst
+        product_ids,
+        mgrs_tile_ids_post,
+        post_dates,
+        track_numbers_post_lst,
     ):
         print(product_id)
         df_one_product = enumerate_one_dist_s1_product(
@@ -153,7 +164,7 @@ def test_dist_enum_default(mgrs_tile_ids: list[str], track_numbers: list[int] | 
 @pytest.mark.parametrize(
     'mgrs_tile_ids, track_numbers',
     [
-        (['45QZE'], [114]),
+        (['15RXN'], [63]),  # Waxlake delta, VV+VH
     ],
 )
 def test_burst_ids_consistent_between_pre_and_post(mgrs_tile_ids: list[str], track_numbers: list[int] | None) -> None:
@@ -186,7 +197,7 @@ def test_burst_ids_consistent_between_pre_and_post(mgrs_tile_ids: list[str], tra
 @pytest.mark.parametrize(
     'mgrs_tile_ids, track_numbers',
     [
-        (['45QZE'], [114]),
+        (['15RXN'], [63]),  # Waxlake delta, VV+VH
     ],
 )
 def test_errors_for_one_product_with_not_enough_pre_images(
