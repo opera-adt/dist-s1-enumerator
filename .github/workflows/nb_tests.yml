@@ -33,15 +33,9 @@ jobs:
           extra-specs: |
             python=${{ matrix.python-version }}
 
-
-      - name: Retry with nick-fields/retry
-        uses: nick-fields/retry@v2
-        with:
-          timeout_minutes: 10
-          max_attempts: 3
-          retry_wait_seconds: 10
-          shell: bash -l {0}
-          command: |
-            python -m pip install --no-deps .
-            python -m ipykernel install --user --name dist-s1-enumerator
-            pytest . -m 'notebooks'
+      - name: Pytest Notebook tests in conda environment
+        shell: bash -l {0}
+        run: |
+          python -m pip install --no-deps .
+          python -m ipykernel install --user --name dist-s1-enumerator
+          pytest . -m 'notebooks'
