@@ -9,7 +9,7 @@ from rasterio.errors import RasterioIOError
 from requests.exceptions import HTTPError
 from tqdm import tqdm
 
-from dist_s1_enumerator.data_models import dist_s1_input_schema
+from dist_s1_enumerator.data_models import rtc_s1_schema
 
 
 def generate_rtc_s1_local_paths(
@@ -73,7 +73,7 @@ def localize_one_rtc(url: str, out_path: Path) -> Path:
     return out_path
 
 
-@check_input(dist_s1_input_schema, 0)
+@check_input(rtc_s1_schema, 0)
 def localize_rtc_s1_ts(
     df_rtc_ts: gpd.GeoDataFrame, data_dir: Path | str, max_workers: int = 5, disable_tqdm: bool = False
 ) -> list[Path]:
