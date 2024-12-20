@@ -89,6 +89,13 @@ def test_dist_enum_default(mgrs_tile_ids: list[str], track_numbers: list[int] | 
 
     assert len(mgrs_tile_ids_post) == len(product_ids) == len(post_dates) == len(track_numbers_post_lst)
 
+    PRODS_TO_TEST = 25  # can set to len(product_ids) to run all products
+    indices = random.sample(range(len(product_ids)), PRODS_TO_TEST)
+    product_ids = [product_ids[i] for i in indices]
+    mgrs_tile_ids_post = [mgrs_tile_ids_post[i] for i in indices]
+    post_dates = [post_dates[i] for i in indices]
+    track_numbers_post_lst = [track_numbers_post_lst[i] for i in indices]
+
     dfs_post = [
         mock_response_from_asf_daac(
             df_rtc_s1_ts,
@@ -112,13 +119,6 @@ def test_dist_enum_default(mgrs_tile_ids: list[str], track_numbers: list[int] | 
     side_effects = [df for group in zip(dfs_post, dfs_pre) for df in group]
 
     mocker.patch('dist_s1_enumerator.asf.get_rtc_s1_ts_metadata_by_burst_ids', side_effect=side_effects)
-
-    # PRODS_TO_TEST = 25
-    # indices = random.sample(range(len(product_ids)), PRODS_TO_TEST)
-    # product_ids = [product_ids[i] for i in indices]
-    # mgrs_tile_ids_post = [mgrs_tile_ids_post[i] for i in indices]
-    # post_dates = [post_dates[i] for i in indices]
-    # track_numbers_post_lst = [track_numbers_post_lst[i] for i in indices]
 
     for product_id, mgrs_tile_id, post_date, track_numbers_post in zip(
         product_ids,
