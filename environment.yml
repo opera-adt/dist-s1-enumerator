@@ -14,14 +14,16 @@ dependencies:
  - matplotlib
  - numpy
  - pandas
+ - pandera
  - pyarrow
  - pytest
  - pytest-cov
  - rasterio
  - requests
  - isort
- - pycodestyle
  - ruff
+ - papermill
  - shapely
  - pandas
  - tqdm
+ - pytest-mock

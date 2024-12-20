@@ -1,0 +1,46 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: extractions/netrc@v2
+        with:
+          machine: urs.earthdata.nasa.gov
+          username: ${{ secrets.EARTHDATA_USERNAME }}
+          password: ${{ secrets.EARTHDATA_PASSWORD }}
+
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: dist-s1-enumerator
+          environment-file: environment.yml
+          extra-specs: |
+            python=${{ matrix.python-version }}
+
+
+      - name: Retry with nick-fields/retry
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 10
+          command: |
+            python -m pip install --no-deps .
+            python -m ipykernel install --user --name dist-s1-enumerator
+            pytest . -m 'notebooks'

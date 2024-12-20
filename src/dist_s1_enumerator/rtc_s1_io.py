@@ -4,12 +4,15 @@ from pathlib import Path
 import backoff
 import geopandas as gpd
 import requests
+from pandera import check_input
 from rasterio.errors import RasterioIOError
 from requests.exceptions import HTTPError
 from tqdm import tqdm
 
+from dist_s1_enumerator.data_models import rtc_s1_schema
 
-def _generate_rtc_s1_local_paths(
+
+def generate_rtc_s1_local_paths(
     urls: list[str], data_dir: Path | str, track_token: list, date_tokens: list[str], mgrs_tokens: list[str]
 ) -> list[Path]:
     data_dir = Path(data_dir)
@@ -36,18 +39,18 @@ def _generate_rtc_s1_local_paths(
     return local_paths
 
 
-def generate_rtc_s1_local_paths(df_rtc_ts: gpd.GeoDataFrame, data_dir: Path | str) -> list[Path]:
-    vv_urls = df_rtc_ts['url_vv'].tolist()
-    vh_urls = df_rtc_ts['url_vh'].tolist()
+def append_local_paths(df_rtc_ts: gpd.GeoDataFrame, data_dir: Path | str) -> list[Path]:
+    copol_urls = df_rtc_ts['url_copol'].tolist()
+    crosspol_urls = df_rtc_ts['url_crosspol'].tolist()
     track_tokens = df_rtc_ts['track_token'].tolist()
-    date_tokens = df_rtc_ts['acq_date'].dt.date.astype(str).tolist()
+    date_tokens = df_rtc_ts['acq_date_for_mgrs_pass'].tolist()
     mgrs_tokens = df_rtc_ts['mgrs_tile_id'].tolist()
 
-    out_paths_vv = _generate_rtc_s1_local_paths(vv_urls, data_dir, track_tokens, date_tokens, mgrs_tokens)
-    out_paths_vh = _generate_rtc_s1_local_paths(vh_urls, data_dir, track_tokens, date_tokens, mgrs_tokens)
+    out_paths_copol = generate_rtc_s1_local_paths(copol_urls, data_dir, track_tokens, date_tokens, mgrs_tokens)
+    out_paths_crosspol = generate_rtc_s1_local_paths(crosspol_urls, data_dir, track_tokens, date_tokens, mgrs_tokens)
     df_out = df_rtc_ts.copy()
-    df_out['loc_path_vv'] = out_paths_vv
-    df_out['loc_path_vh'] = out_paths_vh
+    df_out['loc_path_copol'] = out_paths_copol
+    df_out['loc_path_crosspol'] = out_paths_crosspol
     return df_out
 
 
@@ -70,12 +73,13 @@ def localize_one_rtc(url: str, out_path: Path) -> Path:
     return out_path
 
 
+@check_input(rtc_s1_schema, 0)
 def localize_rtc_s1_ts(
     df_rtc_ts: gpd.GeoDataFrame, data_dir: Path | str, max_workers: int = 5, disable_tqdm: bool = False
 ) -> list[Path]:
-    df_out = generate_rtc_s1_local_paths(df_rtc_ts, data_dir)
-    urls = df_out['url_vv'].tolist() + df_out['url_vh'].tolist()
-    out_paths = df_out['loc_path_vv'].tolist() + df_out['loc_path_vh'].tolist()
+    df_out = append_local_paths(df_rtc_ts, data_dir)
+    urls = df_out['url_copol'].tolist() + df_out['url_crosspol'].tolist()
+    out_paths = df_out['loc_path_copol'].tolist() + df_out['loc_path_crosspol'].tolist()
 
     def localize_one_rtc_p(data: tuple) -> Path:
         return localize_one_rtc(*data)
@@ -84,6 +88,6 @@ def localize_rtc_s1_ts(
         _ = list(tqdm(executor.map(localize_one_rtc_p, zip(urls, out_paths)), total=len(urls), disable=disable_tqdm))
 
     # For serliaziation
-    df_out['loc_path_vv'] = df_out['loc_path_vv'].astype(str)
-    df_out['loc_path_vh'] = df_out['loc_path_vh'].astype(str)
+    df_out['loc_path_copol'] = df_out['loc_path_copol'].astype(str)
+    df_out['loc_path_crosspol'] = df_out['loc_path_crosspol'].astype(str)
     return df_out

@@ -2,24 +2,26 @@ from datetime import datetime, timedelta
 
 import geopandas as gpd
 import pandas as pd
+from pandera import check_input
 from tqdm import tqdm
 
-from dist_s1_enumerator.asf import get_rtc_s1_temporal_group_metadata
-from dist_s1_enumerator.mgrs_burst_data import get_lut_by_mgrs_tile_ids
+from dist_s1_enumerator.asf import get_rtc_s1_metadata_from_acq_group
+from dist_s1_enumerator.data_models import dist_s1_input_schema, reorder_columns, rtc_s1_schema
 
 
 def enumerate_one_dist_s1_product(
     mgrs_tile_id: str,
-    track_number: int,
-    post_date: datetime,
+    track_number: int | list[int],
+    post_date: datetime | pd.Timestamp,
     post_date_buffer_days: int = 1,
     max_pre_imgs_per_burst: int = 10,
     delta_window_days: int = 365,
     delta_lookback_days: int = 0,
+    min_pre_imgs_per_burst: int = 2,
 ) -> gpd.GeoDataFrame:
     """Enumerate a single product using unique DIST-S1 identifiers.
 
-    The key identifiers are:
+    The product identifiers are:
 
     1. MGRS Tile
     2. Track Number
@@ -48,6 +50,8 @@ def enumerate_one_dist_s1_product(
     delta_lookback_days : int, optional
         The latest acceptable date to search for pre-image RTC-S1 data, by
         default 0, i.e. an immediate lookback
+    min_pre_imgs_per_burst : int, optional
+        Minimum number of pre-images per burst to include, by default 2
 
     Returns
     -------
@@ -57,9 +61,22 @@ def enumerate_one_dist_s1_product(
     if post_date_buffer_days >= 6:
         raise ValueError('post_date_buffer_days must be less than 6 (S1 pass length) - please check available data')
 
-    df_rtc_post = get_rtc_s1_temporal_group_metadata(
+    if isinstance(track_number, int):
+        track_numbers = [track_number]
+    elif isinstance(track_number, list):
+        track_numbers = track_number
+    else:
+        raise TypeError('track_number must be a single integer or a list of integers.')
+
+    if isinstance(mgrs_tile_id, list):
+        raise TypeError('mgrs_tile_id must be a single string; we are enumerating inputs for a single DIST-S1 product.')
+
+    if isinstance(post_date, pd.Timestamp):
+        post_date = post_date.to_pydatetime()
+
+    df_rtc_post = get_rtc_s1_metadata_from_acq_group(
         [mgrs_tile_id],
-        track_numbers=[track_number],
+        track_numbers=track_numbers,
         start_acq_dt=post_date + timedelta(days=post_date_buffer_days),
         stop_acq_dt=post_date - timedelta(days=post_date_buffer_days),
         # Should take less than 5 minutes for S1 to pass over MGRS tile
@@ -67,30 +84,63 @@ def enumerate_one_dist_s1_product(
         n_images_per_burst=1,
     )
 
-    post_date_min = df_rtc_post.acq_dt.min()
+    if df_rtc_post.empty:
+        raise ValueError(f'No RTC-S1 post-images found for track {track_number} in MGRS tile {mgrs_tile_id}.')
+
+    # Add 5 minutes buffer to ensure we don't include post-images in pre-image set.
+    post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
     lookback_final = delta_window_days + delta_lookback_days
-    df_rtc_pre = get_rtc_s1_temporal_group_metadata(
+    df_rtc_pre = get_rtc_s1_metadata_from_acq_group(
         [mgrs_tile_id],
-        track_numbers=[track_number],
+        track_numbers=track_numbers,
         start_acq_dt=(post_date_min - timedelta(days=lookback_final)),
         stop_acq_dt=(post_date_min - timedelta(days=delta_lookback_days)),
         n_images_per_burst=max_pre_imgs_per_burst,
     )
 
+    pre_counts = df_rtc_pre.groupby('jpl_burst_id').size()
+    burst_ids_with_min_pre_images = pre_counts[pre_counts >= min_pre_imgs_per_burst].index.tolist()
+    df_rtc_pre = df_rtc_pre[df_rtc_pre.jpl_burst_id.isin(burst_ids_with_min_pre_images)].reset_index(drop=True)
+
+    post_burst_ids = df_rtc_post.jpl_burst_id.unique().tolist()
+    pre_burst_ids = df_rtc_post.jpl_burst_id.unique().tolist()
+
+    final_burst_ids = list(set(post_burst_ids) & set(pre_burst_ids))
+    df_rtc_pre = df_rtc_pre[df_rtc_pre.jpl_burst_id.isin(final_burst_ids)].reset_index(drop=True)
+    df_rtc_post = df_rtc_post[df_rtc_post.jpl_burst_id.isin(final_burst_ids)].reset_index(drop=True)
+
+    if df_rtc_pre.empty:
+        raise ValueError(
+            f'Not enough RTC-S1 pre-images found for track {track_number} in MGRS tile {mgrs_tile_id} '
+            'with available pre-images.'
+        )
+    if df_rtc_post.empty:
+        raise ValueError(
+            f'Not enough RTC-S1 post-images found for track {track_number} in MGRS tile {mgrs_tile_id} '
+            'with available pre-images.'
+        )
+
     df_rtc_pre['input_category'] = 'pre'
     df_rtc_post['input_category'] = 'post'
 
     df_rtc_product = pd.concat([df_rtc_pre, df_rtc_post], axis=0).reset_index(drop=True)
+
+    # Validation
+    dist_s1_input_schema.validate(df_rtc_product)
+    df_rtc_product = reorder_columns(df_rtc_product, dist_s1_input_schema)
+
     return df_rtc_product
 
 
+@check_input(rtc_s1_schema, 0)
 def enumerate_dist_s1_products(
     df_rtc_ts: gpd.GeoDataFrame,
     mgrs_tile_ids: list[str],
-    n_pre_images_per_burst_target: int = 10,
-    min_pre_images_per_burst: int = 2,
+    max_pre_imgs_per_burst: int = 10,
+    min_pre_imgs_per_burst: int = 2,
     tqdm_enable: bool = True,
-    lookback_days_max: int = 365,
+    delta_lookback_days: int = 0,
+    delta_window_days: int = 365,
 ) -> gpd.GeoDataFrame:
     """
     Enumerate from a stack of RTC-S1 metadata and MGRS tile.
@@ -113,25 +163,19 @@ def enumerate_dist_s1_products(
         Maximum number of days to search for pre-image RTC-S1 data, by default
         365
     """
-    df_lut_all = get_lut_by_mgrs_tile_ids(mgrs_tile_ids)
+    if max_pre_imgs_per_burst < min_pre_imgs_per_burst:
+        raise ValueError('max_pre_imgs_per_burst must be greater than min_pre_imgs_per_burst')
 
     products = []
     product_id = 0
     for mgrs_tile_id in tqdm(mgrs_tile_ids, desc='Enumerating by MGRS tiles', disable=(not tqdm_enable)):
-        df_lut_tile = df_lut_all[df_lut_all.mgrs_tile_id == mgrs_tile_id].reset_index(drop=True)
-        acq_group_ids = df_lut_tile.acq_group_id_within_mgrs_tile.unique().tolist()
+        df_rtc_ts_tile = df_rtc_ts[df_rtc_ts.mgrs_tile_id == mgrs_tile_id].reset_index(drop=True)
+        acq_group_ids_in_tile = df_rtc_ts_tile.acq_group_id_within_mgrs_tile.unique().tolist()
         # Groups are analogs to tracks (excepted grouped around the equator to ensure a single pass is grouped properly)
-        for group_id in acq_group_ids:
-            df_burst_ids_pass = (
-                df_lut_tile[df_lut_tile.acq_group_id_within_mgrs_tile == group_id].jpl_burst_id.unique().tolist()
+        for group_id in acq_group_ids_in_tile:
+            df_rtc_ts_tile_track = df_rtc_ts_tile[df_rtc_ts_tile.acq_group_id_within_mgrs_tile == group_id].reset_index(
+                drop=True
             )
-            df_rtc_ts_tile_track = df_rtc_ts[df_rtc_ts.jpl_burst_id.isin(df_burst_ids_pass)].reset_index(drop=True)
-            # Pass ids are just the cycle with respect to the s1 pass
-            min_date = df_rtc_ts_tile_track.acq_dt.min()
-            pass_ids = df_rtc_ts_tile_track.acq_dt.map(lambda dt: (dt - min_date).total_seconds() / 86400 / 6).astype(
-                int
-            )
-            df_rtc_ts_tile_track['pass_id'] = pass_ids
             # Latest pass is now the first to appear in the list of pass_ids
             pass_ids_unique = sorted(df_rtc_ts_tile_track.pass_id.unique().tolist(), reverse=True)
             # Now traverse over all the passes
@@ -140,45 +184,48 @@ def enumerate_dist_s1_products(
                 df_rtc_post = df_rtc_ts_tile_track[df_rtc_ts_tile_track.pass_id == pass_id].reset_index(drop=True)
                 df_rtc_post['input_category'] = 'post'
 
-                # pre
+                # pre-image accounting
                 post_date = df_rtc_post.acq_dt.min()
-                ind = (df_rtc_ts_tile_track.acq_dt < post_date) & (
-                    df_rtc_ts_tile_track.acq_dt >= (post_date - pd.Timedelta(lookback_days_max, unit='D'))
-                )
+                delta_lookback = pd.Timedelta(delta_lookback_days, unit='D')
+                delta_window = pd.Timedelta(delta_window_days, unit='D')
+                window_start = post_date - delta_lookback - delta_window
+                window_stop = post_date - delta_lookback
+
+                # pre-image filtering
+                # Select pre-images temporally
+                ind_time = (df_rtc_ts_tile_track.acq_dt < window_stop) & (df_rtc_ts_tile_track.acq_dt >= window_start)
+                # Select images that are present in the post-image
+                ind_burst = df_rtc_ts_tile_track.jpl_burst_id.isin(df_rtc_post.jpl_burst_id)
+                ind = ind_time & ind_burst
                 df_rtc_pre = df_rtc_ts_tile_track[ind].reset_index(drop=True)
                 df_rtc_pre['input_category'] = 'pre'
 
-                # This should already be true, but done to for clarity
+                # It is unclear how merging when multiple MGRS tiles are provided will impact order so this
+                # is done to ensure the most recent pre-image set for each burst is selected
                 df_rtc_pre = df_rtc_pre.sort_values(by='acq_dt', ascending=True).reset_index(drop=True)
                 # Assume the data is sorted by acquisition date
-                df_rtc_pre = (
-                    df_rtc_pre.groupby('jpl_burst_id').tail(n_pre_images_per_burst_target).reset_index(drop=True)
-                )
+                df_rtc_pre = df_rtc_pre.groupby('jpl_burst_id').tail(max_pre_imgs_per_burst).reset_index(drop=True)
+                if df_rtc_pre.empty:
+                    continue
 
                 # product and provenance
                 df_rtc_product = pd.concat([df_rtc_pre, df_rtc_post]).reset_index(drop=True)
                 df_rtc_product['product_id'] = product_id
-                df_rtc_product['mgrs_tile_id'] = mgrs_tile_id
-                df_rtc_product['acq_group_id_within_mgrs_tile'] = group_id
-                df_rtc_product['pass_id'] = pass_id
-
-                # Remove bursts that are not in both pre and post images
-                pre_post_vals = df_rtc_product.groupby('jpl_burst_id').input_category.nunique()
-                df_rtc_product = df_rtc_product[
-                    df_rtc_product.jpl_burst_id.isin(pre_post_vals[pre_post_vals == 2].index)
-                ].reset_index(drop=True)
 
                 # Remove bursts that don't have minimum number of pre images
                 pre_counts = df_rtc_product[df_rtc_product.input_category == 'pre'].groupby('jpl_burst_id').size()
-                burst_ids_with_min_pre_images = pre_counts[pre_counts >= min_pre_images_per_burst].index.tolist()
+                burst_ids_with_min_pre_images = pre_counts[pre_counts >= min_pre_imgs_per_burst].index.tolist()
                 df_rtc_product = df_rtc_product[
                     df_rtc_product.jpl_burst_id.isin(burst_ids_with_min_pre_images)
                 ].reset_index(drop=True)
 
-                # findalize products
+                # finalize products
                 if not df_rtc_product.empty:
                     products.append(df_rtc_product)
                     product_id += 1
-
     df_prods = pd.concat(products, axis=0).reset_index(drop=True)
+
+    dist_s1_input_schema.validate(df_prods)
+    df_prods = reorder_columns(df_prods, dist_s1_input_schema)
+
     return df_prods

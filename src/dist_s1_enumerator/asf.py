@@ -4,20 +4,86 @@ from warnings import warn
 import asf_search as asf
 import geopandas as gpd
 import pandas as pd
+from pandera import check_input
 from rasterio.crs import CRS
 from shapely.geometry import shape
 
+from dist_s1_enumerator.data_models import reorder_columns, rtc_s1_resp_schema, rtc_s1_schema
 from dist_s1_enumerator.mgrs_burst_data import get_burst_ids_in_mgrs_tiles, get_lut_by_mgrs_tile_ids
+
+
+def format_polarization(pol: list | str) -> str:
+    if isinstance(pol, list):
+        if ('VV' in pol) and len(pol) == 2:
+            return 'VV+VH'
+        elif ('HH' in pol) and len(pol) == 2:
+            return 'HH+HV'
+        else:
+            return '+'.join(pol)
+    elif isinstance(pol, str):
+        return pol
+    else:
+        raise TypeError(f'Invalid polarization: {pol}.')
+
+
+def extract_pass_id(acq_dt: pd.Timestamp) -> int:
+    reference_date = pd.Timestamp('2014-01-01', tz='UTC')
+    return int((acq_dt - reference_date).total_seconds() / 86400 / 6)
+
+
+@check_input(rtc_s1_resp_schema, 0)
+def append_pass_data(df_rtc: gpd.GeoDataFrame, mgrs_tile_ids: list[str]) -> gpd.GeoDataFrame:
+    """Format the RTC S1 metadata for easier lookups."""
+    # Extract the LUT acquisition info
+    # Burst IDs will have multiple rows if they lie in multiple MGRS tiles and those tiles are specified
+    df_lut = get_lut_by_mgrs_tile_ids(mgrs_tile_ids)
+    df_rtc = pd.merge(
+        df_rtc,
+        df_lut[['jpl_burst_id', 'mgrs_tile_id', 'acq_group_id_within_mgrs_tile']],
+        on='jpl_burst_id',
+        how='inner',
+    )
+
+    # Creates a date string 'YYYY-MM-DD' for the earliest acquisition date for a pass of the mgrs tile
+    df_rtc['acq_date_for_mgrs_pass'] = (
+        df_rtc.groupby(['mgrs_tile_id', 'acq_group_id_within_mgrs_tile', 'pass_id'])['acq_dt']
+        .transform('min')
+        .dt.floor('D')
+        .dt.strftime('%Y-%m-%d')
+    )
+
+    # Creates track_token that associates joins the track number with '_' within a pass of the mgrs tile
+    def get_track_token(track_numbers: list[int]) -> str:
+        unique_track_numbers = track_numbers.unique().tolist()
+        return '_'.join(map(str, sorted(unique_track_numbers)))
+
+    df_rtc['track_token'] = df_rtc.groupby(['mgrs_tile_id', 'acq_group_id_within_mgrs_tile'])['track_number'].transform(
+        get_track_token
+    )
+
+    df_rtc = df_rtc.sort_values(by=['mgrs_tile_id', 'acq_group_id_within_mgrs_tile', 'acq_dt']).reset_index(drop=True)
+
+    return df_rtc
 
 
 def get_rtc_s1_ts_metadata_by_burst_ids(
     burst_ids: str | list[str],
     start_acq_dt: str | datetime = None,
     stop_acq_dt: str | datetime = None,
+    polarizations: str | None = None,
 ) -> gpd.GeoDataFrame:
-    """Get ASF RTC burst metadata for a fixed track. The track number is extracted from the burst_ids."""
+    """Wrap/format the ASF search API for RTC-S1 metadata search. All searches go through this function.
+
+    Requires search data to be dual polarized data of the same type (if not specified, will get all search results
+    of the available type).
+
+    If dual polarized data is mixed (that is there are HH+HV and VV+VH), will raise an error.
+    """
     if isinstance(burst_ids, str):
         burst_ids = [burst_ids]
+
+    if (polarizations is not None) and (polarizations not in ['HH+HV', 'VV+VH']):
+        raise ValueError(f'Invalid polarization: {polarizations}. Must be one of: HH+HV, VV+VH, None.')
 
     # make sure JPL syntax is transformed to asf syntax
     burst_ids = [burst_id.upper().replace('-', '_') for burst_id in burst_ids]
@@ -25,13 +91,12 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     resp = asf.search(
         operaBurstID=burst_ids,
         processingLevel='RTC',
-        polarization=['VV', 'VH'],
         start=start_acq_dt,
         end=stop_acq_dt,
     )
     if not resp:
-        raise warn('No results - please check burst id and availability.', category=UserWarning)
-        return gpd.GeoDataFrame()
+        warn('No results - please check burst id and availability.', category=UserWarning)
+        return gpd.GeoDataFrame(columns=rtc_s1_resp_schema.columns.keys())
 
     properties = [r.properties for r in resp]
     geometry = [shape(r.geojson()['geometry']) for r in resp]
@@ -39,43 +104,71 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
         {
             'opera_id': p['sceneName'],
             'acq_dt': pd.to_datetime(p['startTime']),
-            'polarization': '+'.join(p['polarization']),
-            'url_vh': p['url'],
-            'url_vv': (p['url'].replace('_VH.tif', '_VV.tif')),
             'track_number': p['pathNumber'],
+            'polarizations': p['polarization'],
+            'all_urls': [p['url']] + p['additionalUrls'],
         }
         for p in properties
     ]
 
     df_rtc = gpd.GeoDataFrame(properties_f, geometry=geometry, crs=CRS.from_epsg(4326))
 
-    # Ensure dual polarization
+    # Extract the burst_id from the opera_id
     df_rtc['jpl_burst_id'] = df_rtc['opera_id'].map(lambda bid: bid.split('_')[3])
-    df_rtc = df_rtc[df_rtc.polarization == 'VV+VH'].reset_index(drop=True)
-    # Sort by burst_id and acquisition date
-    df_rtc = df_rtc.sort_values(by=['jpl_burst_id', 'acq_dt']).reset_index(drop=True)
+
+    # pass_id is the integer number of 6 day periods since 2014-01-01
+    df_rtc['pass_id'] = df_rtc.acq_dt.map(extract_pass_id)
 
     # Remove duplicates from time series
     df_rtc['dedup_id'] = df_rtc.opera_id.map(lambda id_: '_'.join(id_.split('_')[:5]))
     df_rtc = df_rtc.drop_duplicates(subset=['dedup_id']).reset_index(drop=True)
     df_rtc = df_rtc.drop(columns=['dedup_id'])
 
-    df_rtc = df_rtc[
-        [
-            'opera_id',
-            'jpl_burst_id',
-            'acq_dt',
-            'polarization',
-            'url_vh',
-            'url_vv',
-            'track_number',
-            'geometry',
-        ]
-    ]
+    # polarizations - ensure dual polarization
+    # asf metadata can be ['HH', 'HV'] or 'HH+HV' - reformat to the latter
+    df_rtc['polarizations'] = df_rtc['polarizations'].map(format_polarization)
+    if polarizations is not None:
+        ind_pol = df_rtc['polarizations'] == polarizations
+    else:
+        ind_pol = df_rtc['polarizations'].isin(['HH+HV', 'VV+VH'])
+    if not ind_pol.any():
+        raise ValueError(f'No valid dual polarization images found for {burst_ids}.')
+    # First get all the dual-polarizations images
+    df_rtc = df_rtc[ind_pol].reset_index(drop=True)
+    # Then check all the dual-polarizations are the same (either HH+HV or VV+VH)
+    # TODO: if there are mixtures, can DIST-S1 still be generated assuming they look the same?
+    polarizations_unique = df_rtc['polarizations'].unique().tolist()
+    if len(polarizations_unique) > 1:
+        raise ValueError(
+            f'Mixed dual polarizations found for {burst_ids}. That is, some images are HH+HV and others are VV+HV.'
+        )
+    else:
+        # Either HH+HV or VV+VH
+        copol, crosspol = polarizations_unique[0].split('+')
+
+    def get_url_by_polarization(prod_urls: list[str], polarization_token: str) -> list[str]:
+        possible_urls = [url for url in prod_urls if f'_{polarization_token}.tif' == url[-7:]]
+        if len(possible_urls) == 0:
+            raise ValueError(f'No {polarization_token} urls found')
+        if len(possible_urls) > 1:
+            breakpoint()
+            raise ValueError(f'Multiple {polarization_token} urls found')
+        return possible_urls[0]
+
+    url_copol = df_rtc.all_urls.map(lambda urls_for_prod: get_url_by_polarization(urls_for_prod, copol))
+    url_crosspol = df_rtc.all_urls.map(lambda urls_for_prod: get_url_by_polarization(urls_for_prod, crosspol))
+
+    df_rtc['url_copol'] = url_copol
+    df_rtc['url_crosspol'] = url_crosspol
+    df_rtc = df_rtc.drop(columns=['all_urls'])
+
+    rtc_s1_resp_schema.validate(df_rtc)
+    df_rtc = reorder_columns(df_rtc, rtc_s1_resp_schema)
+
     return df_rtc
 
 
-def get_rtc_s1_temporal_group_metadata(
+def get_rtc_s1_metadata_from_acq_group(
     mgrs_tile_ids: list[str],
     track_numbers: list[int],
     n_images_per_burst: int = 1,
@@ -119,7 +212,11 @@ def get_rtc_s1_temporal_group_metadata(
         raise ValueError('Two track numbers that are not consecutive were provided.')
     burst_ids = get_burst_ids_in_mgrs_tiles(mgrs_tile_ids, track_numbers=track_numbers)
     if not burst_ids:
-        raise ValueError('No burst ids found for the provided MGRS tile and track numbers.')
+        mgrs_tiles_str = ','.join(mgrs_tile_ids)
+        track_numbers_str = ','.join(map(str, track_numbers))
+        raise ValueError(
+            f'No burst ids found for the provided MGRS tile {mgrs_tiles_str} and track numbers {track_numbers_str}.'
+        )
 
     if (n_images_per_burst == 1) and (max_variation_seconds is None):
         warn(
@@ -133,8 +230,8 @@ def get_rtc_s1_temporal_group_metadata(
         start_acq_dt=start_acq_dt,
         stop_acq_dt=stop_acq_dt,
     )
-    columns = df_rtc.columns
     # Assumes that each group is ordered by date (earliest first and most recent last)
+    columns = df_rtc.columns
     df_rtc = df_rtc.groupby('jpl_burst_id').tail(n_images_per_burst).reset_index(drop=False)
     df_rtc = df_rtc[columns]
     if max_variation_seconds is not None:
@@ -143,26 +240,10 @@ def get_rtc_s1_temporal_group_metadata(
         max_dt = df_rtc['acq_dt'].max()
         ind = df_rtc['acq_dt'] > max_dt - pd.Timedelta(seconds=max_variation_seconds)
         df_rtc = df_rtc[ind].reset_index(drop=True)
-    min_dt = df_rtc['acq_dt'].min()
-    df_rtc['pass_id'] = df_rtc['acq_dt'].map(lambda dt: (dt - min_dt).total_seconds() / 86400 // 6)
-    df_rtc['acq_date'] = df_rtc.groupby('pass_id')['acq_dt'].transform('min').dt.floor('D')
 
-    df_lut = get_lut_by_mgrs_tile_ids(mgrs_tile_ids)
-    df_rtc = pd.merge(
-        df_rtc,
-        df_lut[['jpl_burst_id', 'mgrs_tile_id', 'acq_group_id_within_mgrs_tile']],
-        on='jpl_burst_id',
-        how='inner',
-    )
-
-    def get_track_token(track_numbers: list[int]) -> str:
-        unique_track_numbers = track_numbers.unique().tolist()
-        return '_'.join(map(str, sorted(unique_track_numbers)))
-
-    df_rtc['track_token'] = df_rtc.groupby(['mgrs_tile_id', 'acq_group_id_within_mgrs_tile'])['track_number'].transform(
-        get_track_token
-    )
-    df_rtc.drop(columns=['pass_id'], inplace=True)
+    df_rtc = append_pass_data(df_rtc, mgrs_tile_ids)
+    rtc_s1_schema.validate(df_rtc)
+    df_rtc = reorder_columns(df_rtc, rtc_s1_schema)
 
     return df_rtc
 
@@ -172,6 +253,7 @@ def get_rtc_s1_ts_metadata_from_mgrs_tiles(
     track_numbers: list[int] = None,
     start_acq_dt: str | datetime = None,
     stop_acq_dt: str | datetime = None,
+    polarizations: str | None = None,
 ) -> gpd.GeoDataFrame:
     """Get the RTC S1 time series for a given MGRS tile and track number."""
     if isinstance(start_acq_dt, str):
@@ -180,15 +262,26 @@ def get_rtc_s1_ts_metadata_from_mgrs_tiles(
         stop_acq_dt = datetime.strptime(stop_acq_dt, '%Y-%m-%d')
 
     burst_ids = get_burst_ids_in_mgrs_tiles(mgrs_tile_ids, track_numbers=track_numbers)
-    df_rtc_ts = get_rtc_s1_ts_metadata_by_burst_ids(burst_ids, start_acq_dt=start_acq_dt, stop_acq_dt=stop_acq_dt)
+    df_rtc_ts = get_rtc_s1_ts_metadata_by_burst_ids(
+        burst_ids, start_acq_dt=start_acq_dt, stop_acq_dt=stop_acq_dt, polarizations=polarizations
+    )
     if df_rtc_ts.empty:
         mgrs_tiles_str = ','.join(mgrs_tile_ids)
-        track_numbers_str = ','.join(map(str, track_numbers))
-        warn(f'No RTC S1 metadata found for track {track_numbers_str} in MGRS tile {mgrs_tiles_str}.')
-        return gpd.GeoDataFrame()
+        msg = f'No RTC S1 metadata found for  MGRS tile {mgrs_tiles_str}.'
+        if track_numbers is not None:
+            track_number_token = '_'.join(map(str, track_numbers))
+            msg += f' Track numbers provided: {track_number_token}.'
+        warn(msg)
+        return gpd.GeoDataFrame(columns=rtc_s1_schema.columns.keys())
+
+    df_rtc_ts = append_pass_data(df_rtc_ts, mgrs_tile_ids)
+    rtc_s1_schema.validate(df_rtc_ts)
+    df_rtc_ts = reorder_columns(df_rtc_ts, rtc_s1_schema)
+
     return df_rtc_ts
 
 
+@check_input(rtc_s1_schema, 0)
 def agg_rtc_metadata_by_burst_id(df_rtc_ts: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     df_agg = (
         df_rtc_ts.groupby('jpl_burst_id')
