@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 
 import papermill as pm
@@ -6,21 +7,23 @@ import pytest
 
 repo_dir = Path(__file__).parent.parent
 notebooks_dir = repo_dir / 'notebooks'
-
-notebooks_fns = ['A__Staging_Inputs_for_One_MGRS_Tile.ipynb', 'B__Enumerate_MGRS_tile.ipynb']
+notebooks_filenames = ['A__Staging_Inputs_for_One_MGRS_Tile.ipynb', 'B__Enumerate_MGRS_tile.ipynb']
+notebooks_paths = [(notebooks_dir / filename).resolve() for filename in notebooks_filenames]
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize('notebook_fn', notebooks_fns)
-def test_notebook(notebook_fn: str) -> None:
+@pytest.mark.notebooks
+@pytest.mark.parametrize('notebook_path', notebooks_paths)
+def test_notebook(notebook_path: str, change_local_dir: Callable[[Path], Path], test_dir: Path) -> None:
+    # Changes the working directory to the test directory
+    change_local_dir(test_dir)
     tmp_dir = Path(__file__).parent / 'tmp'
     tmp_dir.mkdir(parents=True, exist_ok=True)
-    notebook_path = notebooks_dir / notebook_fn
-    if not notebook_path.exists():
-        pytest.skip(f'Notebook {notebook_fn} not found in notebooks directory')
+    if not notebook_path:
+        pytest.skip(f'Notebook {notebook_path} not found in notebooks directory')
 
     # Create output path in temporary directory
-    output_path = Path(tmp_dir) / f'out_{notebook_fn}'
+    output_path = Path(tmp_dir) / f'out_{notebook_path.name}'
 
     # Execute notebook
     pm.execute_notebook(
@@ -30,6 +33,6 @@ def test_notebook(notebook_fn: str) -> None:
     )
 
     # cleanup
-    for item in tmp_dir.iterdir():
-        item.unlink()
-    tmp_dir.rmdir()
+    # for item in tmp_dir.iterdir():
+    #     item.unlink()
+    # tmp_dir.rmdir()
