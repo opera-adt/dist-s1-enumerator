@@ -9,6 +9,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.0.3] - 2024-12-12
 
 ### Added
+* Support for Python 3.13
 * Explicit error messages when no data is retrieved from various tables (e.g. burst data, MGRS/burst LUT data, etc.)
 * Suite of tests for enumeration
    * Unit tests - tests that can be run in a quick fashion and will be run on each PR to main/dev
