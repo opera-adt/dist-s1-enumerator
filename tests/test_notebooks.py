@@ -8,7 +8,11 @@ import pytest
 
 repo_dir = Path(__file__).parent.parent
 notebooks_dir = repo_dir / 'notebooks'
-notebooks_filenames = ['A__Staging_Inputs_for_One_MGRS_Tile.ipynb', 'B__Enumerate_MGRS_tile.ipynb']
+notebooks_filenames = [
+    # Ignore because of downloading
+    # 'A__Staging_Inputs_for_One_MGRS_Tile.ipynb',
+    'B__Enumerate_MGRS_tile.ipynb',
+]
 notebooks_paths = [(notebooks_dir / filename).resolve() for filename in notebooks_filenames]
 
 
