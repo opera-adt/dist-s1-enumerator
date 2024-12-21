@@ -16,6 +16,7 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python",
   "Topic :: Scientific/Engineering",
 ]
@@ -62,7 +63,8 @@ exclude = [
     "build",
     "dist",
     "site-packages",
-    "notebooks/*"
+    "notebooks/*",
+    "tests/data/*",
 ]
 indent-width = 4
 

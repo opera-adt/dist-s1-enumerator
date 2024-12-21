@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.3] - 2024-12-12
+
+### Added
+* Support for Python 3.13
+* Explicit error messages when no data is retrieved from various tables (e.g. burst data, MGRS/burst LUT data, etc.)
+* Suite of tests for enumeration
+   * Unit tests - tests that can be run in a quick fashion and will be run on each PR to main/dev
+   * Integration tests - in our case, hitting the DAAC API and downloading data when necessary; these also include running the Notebooks.
+   * The latter is marked with `@pytest.mark.integration` and will be run on PRs to main (i.e. release PRs)
+* Schema with Pandera to explicitly define and validate columns and their types
+* Flexibility to retrieve either HH+HV or VV+VH or target one particular dual polarization type (currently does not support mixtures of dual polarized data).
+* Expose the primary functions via the `__init__.py` file
+* Updated environment.yml for Papermill tests
+
+## Fixed
+* `epsg` (now `utm_epsg`) was a string (with extra spacing) and now it's an integer
+
+## Changed
+* For the MGRS table, we renamed `epsg` to `utm_epsg` (to be in line with `utm_wkt`) and cast it as an int
+
 ## [0.0.2]
 
 ### Added

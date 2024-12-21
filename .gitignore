@@ -95,3 +95,7 @@ __pycache__/
 
 # Notebooks
 notebooks/*.parquet
+
+# out tests
+tests/tmp/
+tests/out/
