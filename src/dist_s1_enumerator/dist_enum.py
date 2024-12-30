@@ -12,7 +12,7 @@ from dist_s1_enumerator.data_models import dist_s1_input_schema, reorder_columns
 def enumerate_one_dist_s1_product(
     mgrs_tile_id: str,
     track_number: int | list[int],
-    post_date: datetime | pd.Timestamp,
+    post_date: datetime | pd.Timestamp | str,
     post_date_buffer_days: int = 1,
     max_pre_imgs_per_burst: int = 10,
     delta_window_days: int = 365,
@@ -37,8 +37,8 @@ def enumerate_one_dist_s1_product(
         MGRS tile for DIST-S1 product
     track_number : int
         Track number for RTC-S1 pass
-    post_date : datetime
-        Approximate date of post-image Acquistion
+    post_date : datetime | pd.Timestamp | str
+        Approximate date of post-image Acquistion, if string should be in the form of 'YYYY-MM-DD'.
     post_date_buffer_days : int, optional
         Number of days around the specified post date to search for post-image
         RTC-S1 data
@@ -58,6 +58,9 @@ def enumerate_one_dist_s1_product(
     gpd.GeoDataFrame
     """
     # TODO: Check if we can specify a huge range and still get expected result
+    if isinstance(post_date, str):
+        post_date = pd.Timestamp(post_date)
+
     if post_date_buffer_days >= 6:
         raise ValueError('post_date_buffer_days must be less than 6 (S1 pass length) - please check available data')
 

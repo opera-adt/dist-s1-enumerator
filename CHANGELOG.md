@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.4] - 2024-12-30
+
+### Added
+* Added `localize_rtc_s1_ts` to top-level imports
+* Allowed `post_date` to be a string in the form of 'YYYY-MM-DD' for one product enumeration
+* Schema for localized inputs to ensure columns for local paths: `loc_path_copol` and `loc_path_crosspol`
+
+### Changed
+* Added print date in notebook for clarity.
+
+
 ## [0.0.3] - 2024-12-12
 
 ### Added
