@@ -30,10 +30,10 @@ jobs:
 
       - uses: mamba-org/setup-micromamba@v2
         with:
-          environment-name: dist-s1-enumerator
-          environment-file: environment.yml
-          extra-specs: |
-            python=${{ matrix.python-version }}
+            environment-name: dist-s1-enumerator
+            environment-file: environment.yml
+            create-args: >-
+              python=${{ matrix.python-version }}
 
 
       - name: Pytest in conda environment
