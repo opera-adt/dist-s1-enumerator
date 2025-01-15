@@ -8,6 +8,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.0.4] - 2024-12-30
 
+### Removed
+* Removed `papermill` from environment.yml as it is not supported by 3.13
+
 ### Added
 * Added `localize_rtc_s1_ts` to top-level imports
 * Allowed `post_date` to be a string in the form of 'YYYY-MM-DD' for one product enumeration
