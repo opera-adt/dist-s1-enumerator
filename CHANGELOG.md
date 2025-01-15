@@ -15,6 +15,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 * Added print date in notebook for clarity.
+* Remove schema check from `append_pass_data` and enforce only certain columns to be present. 
 
 
 ## [0.0.3] - 2024-12-12
