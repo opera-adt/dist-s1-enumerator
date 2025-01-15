@@ -18,7 +18,6 @@ dependencies:
  - pandas
  - pandas
  - pandera
- - papermill
  - pyarrow
  - pytest
  - pytest-cov

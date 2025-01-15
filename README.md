@@ -71,7 +71,7 @@ While we can modify strategies of pre-image selection using this library, it is 
 
 For the test suite:
 
-1. Install `pytest` via `conda-forge`
+1. Install `papermill` via `conda-forge` (currently not supported by 3.13)
 2. Run `pytest tests`
 
 There are two category of tests: unit tests and integration tests. The former can be run using `pytest tests -m 'not integration'` and similarly the latter with `pytest tests -m 'integration'`. The intgeration tests are those that can be integrated into the DAAC data access workflows and thus require internet access with earthdata credentials setup correctly (as described above). The unit tests mock the necessary data inputs.

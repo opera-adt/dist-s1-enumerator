@@ -2,7 +2,6 @@ import shutil
 from collections.abc import Callable
 from pathlib import Path
 
-import papermill as pm
 import pytest
 
 
@@ -20,6 +19,9 @@ notebooks_paths = [(notebooks_dir / filename).resolve() for filename in notebook
 @pytest.mark.notebooks
 @pytest.mark.parametrize('notebook_path', notebooks_paths)
 def test_notebook(notebook_path: str, change_local_dir: Callable[[Path], Path], test_dir: Path) -> None:
+    # TODO: move to top when papermill supports 3.13
+    import papermill as pm
+
     # Changes the working directory to the test directory
     change_local_dir(test_dir)
 

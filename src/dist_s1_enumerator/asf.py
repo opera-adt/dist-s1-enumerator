@@ -31,11 +31,13 @@ def extract_pass_id(acq_dt: pd.Timestamp) -> int:
     return int((acq_dt - reference_date).total_seconds() / 86400 / 6)
 
 
-@check_input(rtc_s1_resp_schema, 0)
 def append_pass_data(df_rtc: gpd.GeoDataFrame, mgrs_tile_ids: list[str]) -> gpd.GeoDataFrame:
     """Format the RTC S1 metadata for easier lookups."""
     # Extract the LUT acquisition info
     # Burst IDs will have multiple rows if they lie in multiple MGRS tiles and those tiles are specified
+    rtc_columns = df_rtc.columns.tolist()
+    if not all([col in rtc_columns for col in ['jpl_burst_id', 'pass_id', 'acq_dt', 'track_number']]):
+        raise ValueError('Cannot append pass data without jpl_burst_id, pass_id, acq_dt, and track_number columns.')
     df_lut = get_lut_by_mgrs_tile_ids(mgrs_tile_ids)
     df_rtc = pd.merge(
         df_rtc,
@@ -43,7 +45,6 @@ def append_pass_data(df_rtc: gpd.GeoDataFrame, mgrs_tile_ids: list[str]) -> gpd.
         on='jpl_burst_id',
         how='inner',
     )
-
     # Creates a date string 'YYYY-MM-DD' for the earliest acquisition date for a pass of the mgrs tile
     df_rtc['acq_date_for_mgrs_pass'] = (
         df_rtc.groupby(['mgrs_tile_id', 'acq_group_id_within_mgrs_tile', 'pass_id'])['acq_dt']
