@@ -34,6 +34,8 @@ jobs:
           environment-file: environment.yml
           extra-specs: |
             python=${{ matrix.python-version }}
+          create-args: |
+            papermill
 
       - name: Pytest Notebook tests in conda environment
         shell: bash -l {0}
