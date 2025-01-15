@@ -59,6 +59,15 @@ dist_s1_input_schema = rtc_s1_schema.add_columns(
     }
 )
 
+# Schema for localized inputs
+dist_s1_loc_input_schema = dist_s1_input_schema.add_columns(
+    {
+        'loc_path_copol': Column(str, required=True),
+        'loc_path_crosspol': Column(str, required=True),
+        'geometry': Column('geometry', required=True),
+    }
+)
+
 burst_mgrs_lut_schema = DataFrameSchema(
     {
         'jpl_burst_id': Column(str, required=True),

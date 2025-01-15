@@ -17,6 +17,7 @@ from dist_s1_enumerator.mgrs_burst_data import (
     get_mgrs_table,
     get_mgrs_tiles_overlapping_geometry,
 )
+from dist_s1_enumerator.rtc_s1_io import localize_rtc_s1_ts
 
 
 try:
@@ -48,4 +49,5 @@ __all__ = [
     'get_mgrs_tiles_overlapping_geometry',
     'get_rtc_s1_metadata_from_acq_group',
     'get_rtc_s1_ts_metadata_from_mgrs_tiles',
+    'localize_rtc_s1_ts',
 ]
