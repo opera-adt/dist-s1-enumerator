@@ -38,7 +38,7 @@ jobs:
       - name: Pytest Notebook tests in conda environment
         shell: bash -l {0}
         run: |
-          mamba install -y -c conda-forge papermill
+          mamba install papermill --yes
           python -m pip install --no-deps .
           python -m ipykernel install --user --name dist-s1-enumerator
           pytest . -m 'notebooks'
