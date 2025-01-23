@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import geopandas as gpd
 import pandas as pd
 from pandera import check_input
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from dist_s1_enumerator.asf import get_rtc_s1_metadata_from_acq_group
 from dist_s1_enumerator.data_models import dist_s1_input_schema, reorder_columns, rtc_s1_schema
@@ -141,7 +141,7 @@ def enumerate_dist_s1_products(
     mgrs_tile_ids: list[str],
     max_pre_imgs_per_burst: int = 10,
     min_pre_imgs_per_burst: int = 2,
-    tqdm_enable: bool = True,
+    tqdm_enabled: bool = True,
     delta_lookback_days: int = 0,
     delta_window_days: int = 365,
 ) -> gpd.GeoDataFrame:
@@ -171,7 +171,7 @@ def enumerate_dist_s1_products(
 
     products = []
     product_id = 0
-    for mgrs_tile_id in tqdm(mgrs_tile_ids, desc='Enumerating by MGRS tiles', disable=(not tqdm_enable)):
+    for mgrs_tile_id in tqdm(mgrs_tile_ids, desc='Enumerate by MGRS tiles', disable=(not tqdm_enabled)):
         df_rtc_ts_tile = df_rtc_ts[df_rtc_ts.mgrs_tile_id == mgrs_tile_id].reset_index(drop=True)
         acq_group_ids_in_tile = df_rtc_ts_tile.acq_group_id_within_mgrs_tile.unique().tolist()
         # Groups are analogs to tracks (excepted grouped around the equator to ensure a single pass is grouped properly)

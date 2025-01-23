@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.6] - 2025-01-16
+  
+## Changed
+* Renamed `disable_tqdm` to `tqdm_enabled` in `localize_rtc_s1_ts`
+
+## Added
+* Description to `tqdm` progress bar in `localize_rtc_s1_ts`.
+* Use `tqdm.auto` to automatically determine how `tqdm` should be displayed (either via CLI or in a notebook).
+
 ## [0.0.5] - 2025-01-16
 
 * Dummy release due to expired github token.

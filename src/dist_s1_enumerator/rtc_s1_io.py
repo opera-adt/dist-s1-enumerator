@@ -7,7 +7,7 @@ import requests
 from pandera import check_input
 from rasterio.errors import RasterioIOError
 from requests.exceptions import HTTPError
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from dist_s1_enumerator.data_models import rtc_s1_schema
 
@@ -75,7 +75,10 @@ def localize_one_rtc(url: str, out_path: Path) -> Path:
 
 @check_input(rtc_s1_schema, 0)
 def localize_rtc_s1_ts(
-    df_rtc_ts: gpd.GeoDataFrame, data_dir: Path | str, max_workers: int = 5, disable_tqdm: bool = False
+    df_rtc_ts: gpd.GeoDataFrame,
+    data_dir: Path | str,
+    max_workers: int = 5,
+    tqdm_enabled: bool = True,
 ) -> list[Path]:
     df_out = append_local_paths(df_rtc_ts, data_dir)
     urls = df_out['url_copol'].tolist() + df_out['url_crosspol'].tolist()
@@ -84,9 +87,17 @@ def localize_rtc_s1_ts(
     def localize_one_rtc_p(data: tuple) -> Path:
         return localize_one_rtc(*data)
 
+    disable_tqdm = not tqdm_enabled
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        _ = list(tqdm(executor.map(localize_one_rtc_p, zip(urls, out_paths)), total=len(urls), disable=disable_tqdm))
-
+        _ = list(
+            tqdm(
+                executor.map(localize_one_rtc_p, zip(urls, out_paths)),
+                total=len(urls),
+                disable=disable_tqdm,
+                desc='Downloading RTC-S1 burst data',
+                dynamic_ncols=True,
+            )
+        )
     # For serliaziation
     df_out['loc_path_copol'] = df_out['loc_path_copol'].astype(str)
     df_out['loc_path_crosspol'] = df_out['loc_path_crosspol'].astype(str)
