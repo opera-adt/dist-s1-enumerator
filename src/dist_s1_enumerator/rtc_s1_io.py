@@ -7,7 +7,7 @@ import requests
 from pandera import check_input
 from rasterio.errors import RasterioIOError
 from requests.exceptions import HTTPError
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from dist_s1_enumerator.data_models import rtc_s1_schema
 
@@ -94,7 +94,8 @@ def localize_rtc_s1_ts(
                 executor.map(localize_one_rtc_p, zip(urls, out_paths)),
                 total=len(urls),
                 disable=disable_tqdm,
-                desc='Localizing RTC-S1 burst data',
+                desc='Downloading RTC-S1 burst data',
+                dynamic_ncols=True,
             )
         )
     # For serliaziation

@@ -13,6 +13,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Added
 * Description to `tqdm` progress bar in `localize_rtc_s1_ts`.
+* Use `tqdm.auto` to automatically determine how `tqdm` should be displayed (either via CLI or in a notebook).
 
 ## [0.0.5] - 2025-01-16
 
