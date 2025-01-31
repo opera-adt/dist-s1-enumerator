@@ -93,11 +93,13 @@ def enumerate_one_dist_s1_product(
     # Add 5 minutes buffer to ensure we don't include post-images in pre-image set.
     post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
     lookback_final = delta_window_days + delta_lookback_days
+    start_acq_dt = post_date_min - timedelta(days=lookback_final)
+    stop_acq_dt = post_date_min - timedelta(days=delta_lookback_days)
     df_rtc_pre = get_rtc_s1_metadata_from_acq_group(
         [mgrs_tile_id],
         track_numbers=track_numbers,
-        start_acq_dt=(post_date_min - timedelta(days=lookback_final)),
-        stop_acq_dt=(post_date_min - timedelta(days=delta_lookback_days)),
+        start_acq_dt=start_acq_dt,
+        stop_acq_dt=stop_acq_dt,
         n_images_per_burst=max_pre_imgs_per_burst,
     )
 
