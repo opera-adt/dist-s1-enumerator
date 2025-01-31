@@ -62,7 +62,7 @@ def append_pass_data(df_rtc: gpd.GeoDataFrame, mgrs_tile_ids: list[str]) -> gpd.
         get_track_token
     )
 
-    df_rtc = df_rtc.sort_values(by=['mgrs_tile_id', 'acq_group_id_within_mgrs_tile', 'acq_dt']).reset_index(drop=True)
+    df_rtc = df_rtc.sort_values(by=['jpl_burst_id', 'acq_dt']).reset_index(drop=True)
 
     return df_rtc
 
@@ -162,6 +162,9 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     df_rtc['url_copol'] = url_copol
     df_rtc['url_crosspol'] = url_crosspol
     df_rtc = df_rtc.drop(columns=['all_urls'])
+
+    # Ensure the data is sorted by jpl_burst_id and acq_dt
+    df_rtc = df_rtc.sort_values(by=['jpl_burst_id', 'acq_dt'], ascending=True).reset_index(drop=True)
 
     rtc_s1_resp_schema.validate(df_rtc)
     df_rtc = reorder_columns(df_rtc, rtc_s1_resp_schema)
