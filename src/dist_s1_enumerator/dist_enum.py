@@ -19,7 +19,7 @@ def enumerate_one_dist_s1_product(
     max_pre_imgs_per_burst_mw: list[int] = [5, 5],
     delta_window_days: int = 365,
     delta_lookback_days: int = 0,
-    delta_lookback_days_mw: list[int] = [365*2, 365*1],
+    delta_lookback_days_mw: list[int] = [365 * 2, 365 * 1],
     min_pre_imgs_per_burst: int = 2,
 ) -> gpd.GeoDataFrame:
     """Enumerate a single product using unique DIST-S1 identifiers.
@@ -116,12 +116,12 @@ def enumerate_one_dist_s1_product(
             stop_acq_dt=stop_acq_dt,
             n_images_per_burst=max_pre_imgs_per_burst,
         )
-    
+
     elif lookback_strategy == 'multi_window':
         print('Using multi-window lookback strategy')
         df_rtc_pre_list = []
         for delta_lookback_day, max_pre_img_per_burst in zip(delta_lookback_days_mw, max_pre_imgs_per_burst_mw):
-            # Add 5 minutes buffer to ensure we don't include post-images in pre-image set. 
+            # Add 5 minutes buffer to ensure we don't include post-images in pre-image set.
             post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
             lookback_final = delta_window_days + delta_lookback_day
             start_acq_dt = post_date_min - timedelta(days=lookback_final)
@@ -133,7 +133,7 @@ def enumerate_one_dist_s1_product(
                 stop_acq_dt=stop_acq_dt,
                 n_images_per_burst=max_pre_img_per_burst,
             )
-        
+
             if not df_rtc_pre.empty:
                 df_rtc_pre_list.append(df_rtc_pre)
 
@@ -141,8 +141,7 @@ def enumerate_one_dist_s1_product(
 
     else:
         raise ValueError(
-            f'Unsupported lookback_strategy: {lookback_strategy}. '
-            'Expected "multi_window" or "immediate_lookback".'
+            f'Unsupported lookback_strategy: {lookback_strategy}. Expected "multi_window" or "immediate_lookback".'
         )
 
     pre_counts = df_rtc_pre.groupby('jpl_burst_id').size()
@@ -190,7 +189,7 @@ def enumerate_dist_s1_products(
     tqdm_enabled: bool = True,
     delta_lookback_days: int = 0,
     delta_window_days: int = 365,
-    delta_lookback_days_mw: list[int] = [365*2, 365*1]
+    delta_lookback_days_mw: list[int] = [365 * 2, 365 * 1],
 ) -> gpd.GeoDataFrame:
     """
     Enumerate from a stack of RTC-S1 metadata and MGRS tile.
@@ -240,7 +239,7 @@ def enumerate_dist_s1_products(
                 df_rtc_post = df_rtc_ts_tile_track[df_rtc_ts_tile_track.pass_id == pass_id].reset_index(drop=True)
                 df_rtc_post['input_category'] = 'post'
 
-                if lookback_strategy == 'immediate_lookback':  
+                if lookback_strategy == 'immediate_lookback':
                     # pre-image accounting
                     post_date = df_rtc_post.acq_dt.min()
                     delta_lookback = pd.Timedelta(delta_lookback_days, unit='D')
@@ -250,9 +249,8 @@ def enumerate_dist_s1_products(
 
                     # pre-image filtering
                     # Select pre-images temporally
-                    ind_time = (
-                        (df_rtc_ts_tile_track.acq_dt < window_stop) &
-                        (df_rtc_ts_tile_track.acq_dt >= window_start)
+                    ind_time = (df_rtc_ts_tile_track.acq_dt < window_stop) & (
+                        df_rtc_ts_tile_track.acq_dt >= window_start
                     )
                     # Select images that are present in the post-image
                     ind_burst = df_rtc_ts_tile_track.jpl_burst_id.isin(df_rtc_post.jpl_burst_id)
@@ -287,9 +285,8 @@ def enumerate_dist_s1_products(
 
                         # pre-image filtering
                         # Select pre-images temporally
-                        ind_time = (
-                            (df_rtc_ts_tile_track.acq_dt < window_stop) &
-                            (df_rtc_ts_tile_track.acq_dt >= window_start)
+                        ind_time = (df_rtc_ts_tile_track.acq_dt < window_stop) & (
+                            df_rtc_ts_tile_track.acq_dt >= window_start
                         )
                         # Select images that are present in the post-image
                         ind_burst = df_rtc_ts_tile_track.jpl_burst_id.isin(df_rtc_post.jpl_burst_id)
@@ -302,22 +299,18 @@ def enumerate_dist_s1_products(
                         df_rtc_pre = df_rtc_pre.sort_values(by='acq_dt', ascending=True).reset_index(drop=True)
                         # Assume the data is sorted by acquisition date
                         df_rtc_pre = (
-                            df_rtc_pre.groupby('jpl_burst_id')
-                            .tail(max_pre_img_per_burst)
-                            .reset_index(drop=True)
+                            df_rtc_pre.groupby('jpl_burst_id').tail(max_pre_img_per_burst).reset_index(drop=True)
                         )
 
                         if df_rtc_pre.empty:
                             continue
 
                         if not df_rtc_pre.empty:
-                            df_rtc_pre_list.append(df_rtc_pre)  # Store each df_rtc_pre   
+                            df_rtc_pre_list.append(df_rtc_pre)  # Store each df_rtc_pre
 
                     # Concatenate all df_rtc_pre into a single DataFrame
                     df_rtc_pre_final = (
-                        pd.concat(df_rtc_pre_list, ignore_index=True)
-                        if df_rtc_pre_list
-                        else pd.DataFrame()
+                        pd.concat(df_rtc_pre_list, ignore_index=True) if df_rtc_pre_list else pd.DataFrame()
                     )
                     # df_rtc_pre_final = df_rtc_pre_final.sort_values(
                     #     by='acq_dt', ascending=True
