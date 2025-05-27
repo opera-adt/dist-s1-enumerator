@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.8] - 2025-05-27
+
+### Added
+* Implemented `lookback_strategy` in `dist_enum`
+* Use option `immediate_lookback` to search for the pre dates immediatelly before the `post_date`
+* Use option `multi_window` to search for pre dates as windows defined by `max_pre_imgs_per_burst_mw` and `delta_lookback_days_mw` 
+
+
 ## [0.0.7] - 2025-01-16
 
 ### Fixed
