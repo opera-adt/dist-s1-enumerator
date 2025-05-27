@@ -13,10 +13,13 @@ def enumerate_one_dist_s1_product(
     mgrs_tile_id: str,
     track_number: int | list[int],
     post_date: datetime | pd.Timestamp | str,
+    lookback_strategy: str = 'multi_window',
     post_date_buffer_days: int = 1,
     max_pre_imgs_per_burst: int = 10,
+    max_pre_imgs_per_burst_mw: list[int] = [5, 5],
     delta_window_days: int = 365,
     delta_lookback_days: int = 0,
+    delta_lookback_days_mw: list[int] = [365*2, 365*1],
     min_pre_imgs_per_burst: int = 2,
 ) -> gpd.GeoDataFrame:
     """Enumerate a single product using unique DIST-S1 identifiers.
@@ -42,14 +45,23 @@ def enumerate_one_dist_s1_product(
     post_date_buffer_days : int, optional
         Number of days around the specified post date to search for post-image
         RTC-S1 data
+    lookback_strategy : str, optional
+        Lookback strategy to use, by default 'multi_window'. Options are
+        'immediate_lookback' or 'multi_window'. The immediate lookback
     max_pre_imgs_per_burst : int, optional
         Number of pre-images per bust to include, by default 10
+    max_pre_imgs_per_burst_mw : list[int], optional
+        Number of pre-images per burst to include for each lookback window
+        (multi-window strategy), by default [5, 5]
     delta_window_days : int, optional
         The acceptable window of time to search for pre-image RTC-S1 data
         (latest date is determine delta_lookback_days), by default 365
     delta_lookback_days : int, optional
         The latest acceptable date to search for pre-image RTC-S1 data, by
         default 0, i.e. an immediate lookback
+    delta_lookback_days_mw : list[int], optional
+        The latest acceptable date to search for pre-image RTC-S1 data for
+        each lookback window (multi-window strategy), by default [365*2, 365*1]
     min_pre_imgs_per_burst : int, optional
         Minimum number of pre-images per burst to include, by default 2
 
@@ -90,18 +102,48 @@ def enumerate_one_dist_s1_product(
     if df_rtc_post.empty:
         raise ValueError(f'No RTC-S1 post-images found for track {track_number} in MGRS tile {mgrs_tile_id}.')
 
-    # Add 5 minutes buffer to ensure we don't include post-images in pre-image set.
-    post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
-    lookback_final = delta_window_days + delta_lookback_days
-    start_acq_dt = post_date_min - timedelta(days=lookback_final)
-    stop_acq_dt = post_date_min - timedelta(days=delta_lookback_days)
-    df_rtc_pre = get_rtc_s1_metadata_from_acq_group(
-        [mgrs_tile_id],
-        track_numbers=track_numbers,
-        start_acq_dt=start_acq_dt,
-        stop_acq_dt=stop_acq_dt,
-        n_images_per_burst=max_pre_imgs_per_burst,
-    )
+    if lookback_strategy == 'immediate_lookback':
+        print('Using immediate lookback strategy')
+        # Add 5 minutes buffer to ensure we don't include post-images in pre-image set.
+        post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
+        lookback_final = delta_window_days + delta_lookback_days
+        start_acq_dt = post_date_min - timedelta(days=lookback_final)
+        stop_acq_dt = post_date_min - timedelta(days=delta_lookback_days)
+        df_rtc_pre = get_rtc_s1_metadata_from_acq_group(
+            [mgrs_tile_id],
+            track_numbers=track_numbers,
+            start_acq_dt=start_acq_dt,
+            stop_acq_dt=stop_acq_dt,
+            n_images_per_burst=max_pre_imgs_per_burst,
+        )
+    
+    elif lookback_strategy == 'multi_window':
+        print('Using multi-window lookback strategy')
+        df_rtc_pre_list = []
+        for delta_lookback_day, max_pre_img_per_burst in zip(delta_lookback_days_mw, max_pre_imgs_per_burst_mw):
+            # Add 5 minutes buffer to ensure we don't include post-images in pre-image set. 
+            post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
+            lookback_final = delta_window_days + delta_lookback_day
+            start_acq_dt = post_date_min - timedelta(days=lookback_final)
+            stop_acq_dt = post_date_min - timedelta(days=delta_lookback_day)
+            df_rtc_pre = get_rtc_s1_metadata_from_acq_group(
+                [mgrs_tile_id],
+                track_numbers=track_numbers,
+                start_acq_dt=start_acq_dt,
+                stop_acq_dt=stop_acq_dt,
+                n_images_per_burst=max_pre_img_per_burst,
+            )
+        
+            if not df_rtc_pre.empty:
+                df_rtc_pre_list.append(df_rtc_pre)
+
+        df_rtc_pre = pd.concat(df_rtc_pre_list, ignore_index=True) if df_rtc_pre_list else pd.DataFrame()
+
+    else:
+        raise ValueError(
+            f'Unsupported lookback_strategy: {lookback_strategy}. '
+            'Expected "multi_window" or "immediate_lookback".'
+        )
 
     pre_counts = df_rtc_pre.groupby('jpl_burst_id').size()
     burst_ids_with_min_pre_images = pre_counts[pre_counts >= min_pre_imgs_per_burst].index.tolist()
@@ -141,11 +183,14 @@ def enumerate_one_dist_s1_product(
 def enumerate_dist_s1_products(
     df_rtc_ts: gpd.GeoDataFrame,
     mgrs_tile_ids: list[str],
+    lookback_strategy: str = 'multi_window',
     max_pre_imgs_per_burst: int = 10,
+    max_pre_imgs_per_burst_mw: list[int] = [5, 5],
     min_pre_imgs_per_burst: int = 2,
     tqdm_enabled: bool = True,
     delta_lookback_days: int = 0,
     delta_window_days: int = 365,
+    delta_lookback_days_mw: list[int] = [365*2, 365*1]
 ) -> gpd.GeoDataFrame:
     """
     Enumerate from a stack of RTC-S1 metadata and MGRS tile.
@@ -168,8 +213,14 @@ def enumerate_dist_s1_products(
         Maximum number of days to search for pre-image RTC-S1 data, by default
         365
     """
-    if max_pre_imgs_per_burst < min_pre_imgs_per_burst:
-        raise ValueError('max_pre_imgs_per_burst must be greater than min_pre_imgs_per_burst')
+    if lookback_strategy == 'immediate_lookback':
+        print('Using immediate lookback strategy')
+        if max_pre_imgs_per_burst < min_pre_imgs_per_burst:
+            raise ValueError('max_pre_imgs_per_burst must be greater than min_pre_imgs_per_burst')
+    if lookback_strategy == 'multi_window':
+        print('Using multi-window lookback strategy')
+        if any(m < min_pre_imgs_per_burst for m in max_pre_imgs_per_burst_mw):
+            raise ValueError('All values in max_pre_imgs_per_burst must be greater than min_pre_imgs_per_burst')
 
     products = []
     product_id = 0
@@ -189,33 +240,98 @@ def enumerate_dist_s1_products(
                 df_rtc_post = df_rtc_ts_tile_track[df_rtc_ts_tile_track.pass_id == pass_id].reset_index(drop=True)
                 df_rtc_post['input_category'] = 'post'
 
-                # pre-image accounting
-                post_date = df_rtc_post.acq_dt.min()
-                delta_lookback = pd.Timedelta(delta_lookback_days, unit='D')
-                delta_window = pd.Timedelta(delta_window_days, unit='D')
-                window_start = post_date - delta_lookback - delta_window
-                window_stop = post_date - delta_lookback
+                if lookback_strategy == 'immediate_lookback':  
+                    # pre-image accounting
+                    post_date = df_rtc_post.acq_dt.min()
+                    delta_lookback = pd.Timedelta(delta_lookback_days, unit='D')
+                    delta_window = pd.Timedelta(delta_window_days, unit='D')
+                    window_start = post_date - delta_lookback - delta_window
+                    window_stop = post_date - delta_lookback
 
-                # pre-image filtering
-                # Select pre-images temporally
-                ind_time = (df_rtc_ts_tile_track.acq_dt < window_stop) & (df_rtc_ts_tile_track.acq_dt >= window_start)
-                # Select images that are present in the post-image
-                ind_burst = df_rtc_ts_tile_track.jpl_burst_id.isin(df_rtc_post.jpl_burst_id)
-                ind = ind_time & ind_burst
-                df_rtc_pre = df_rtc_ts_tile_track[ind].reset_index(drop=True)
-                df_rtc_pre['input_category'] = 'pre'
+                    # pre-image filtering
+                    # Select pre-images temporally
+                    ind_time = (
+                        (df_rtc_ts_tile_track.acq_dt < window_stop) &
+                        (df_rtc_ts_tile_track.acq_dt >= window_start)
+                    )
+                    # Select images that are present in the post-image
+                    ind_burst = df_rtc_ts_tile_track.jpl_burst_id.isin(df_rtc_post.jpl_burst_id)
+                    ind = ind_time & ind_burst
+                    df_rtc_pre = df_rtc_ts_tile_track[ind].reset_index(drop=True)
+                    df_rtc_pre['input_category'] = 'pre'
 
-                # It is unclear how merging when multiple MGRS tiles are provided will impact order so this
-                # is done to ensure the most recent pre-image set for each burst is selected
-                df_rtc_pre = df_rtc_pre.sort_values(by='acq_dt', ascending=True).reset_index(drop=True)
-                # Assume the data is sorted by acquisition date
-                df_rtc_pre = df_rtc_pre.groupby('jpl_burst_id').tail(max_pre_imgs_per_burst).reset_index(drop=True)
-                if df_rtc_pre.empty:
-                    continue
+                    # It is unclear how merging when multiple MGRS tiles are provided will impact order so this
+                    # is done to ensure the most recent pre-image set for each burst is selected
+                    df_rtc_pre = df_rtc_pre.sort_values(by='acq_dt', ascending=True).reset_index(drop=True)
+                    # Assume the data is sorted by acquisition date
+                    df_rtc_pre = df_rtc_pre.groupby('jpl_burst_id').tail(max_pre_imgs_per_burst).reset_index(drop=True)
+                    if df_rtc_pre.empty:
+                        continue
 
-                # product and provenance
-                df_rtc_product = pd.concat([df_rtc_pre, df_rtc_post]).reset_index(drop=True)
-                df_rtc_product['product_id'] = product_id
+                    # product and provenance
+                    df_rtc_product = pd.concat([df_rtc_pre, df_rtc_post]).reset_index(drop=True)
+                    df_rtc_product['product_id'] = product_id
+
+                elif lookback_strategy == 'multi_window':
+                    # pre-image accounting
+                    post_date = df_rtc_post.acq_dt.min()
+                    # Loop over the different lookback days
+                    df_rtc_pre_list = []
+                    for delta_lookback_day, max_pre_img_per_burst in zip(
+                        delta_lookback_days_mw, max_pre_imgs_per_burst_mw
+                    ):
+                        delta_lookback = pd.Timedelta(delta_lookback_day, unit='D')
+                        delta_window = pd.Timedelta(delta_window_days, unit='D')
+                        window_start = post_date - delta_lookback - delta_window
+                        window_stop = post_date - delta_lookback
+
+                        # pre-image filtering
+                        # Select pre-images temporally
+                        ind_time = (
+                            (df_rtc_ts_tile_track.acq_dt < window_stop) &
+                            (df_rtc_ts_tile_track.acq_dt >= window_start)
+                        )
+                        # Select images that are present in the post-image
+                        ind_burst = df_rtc_ts_tile_track.jpl_burst_id.isin(df_rtc_post.jpl_burst_id)
+                        ind = ind_time & ind_burst
+                        df_rtc_pre = df_rtc_ts_tile_track[ind].reset_index(drop=True)
+                        df_rtc_pre['input_category'] = 'pre'
+
+                        # It is unclear how merging when multiple MGRS tiles are provided will impact order so this
+                        # is done to ensure the most recent pre-image set for each burst is selected
+                        df_rtc_pre = df_rtc_pre.sort_values(by='acq_dt', ascending=True).reset_index(drop=True)
+                        # Assume the data is sorted by acquisition date
+                        df_rtc_pre = (
+                            df_rtc_pre.groupby('jpl_burst_id')
+                            .tail(max_pre_img_per_burst)
+                            .reset_index(drop=True)
+                        )
+
+                        if df_rtc_pre.empty:
+                            continue
+
+                        if not df_rtc_pre.empty:
+                            df_rtc_pre_list.append(df_rtc_pre)  # Store each df_rtc_pre   
+
+                    # Concatenate all df_rtc_pre into a single DataFrame
+                    df_rtc_pre_final = (
+                        pd.concat(df_rtc_pre_list, ignore_index=True)
+                        if df_rtc_pre_list
+                        else pd.DataFrame()
+                    )
+                    # df_rtc_pre_final = df_rtc_pre_final.sort_values(
+                    #     by='acq_dt', ascending=True
+                    # ).reset_index(drop=True)  # Sort by acq_dt
+
+                    # product and provenance
+                    df_rtc_product = pd.concat([df_rtc_pre_final, df_rtc_post]).reset_index(drop=True)
+                    df_rtc_product['product_id'] = product_id
+
+                else:
+                    raise ValueError(
+                        f'Unsupported lookback_strategy: {lookback_strategy}. '
+                        'Expected "multi_window" or "immediate_lookback".'
+                    )
 
                 # Remove bursts that don't have minimum number of pre images
                 pre_counts = df_rtc_product[df_rtc_product.input_category == 'pre'].groupby('jpl_burst_id').size()
