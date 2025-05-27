@@ -13,7 +13,7 @@ def enumerate_one_dist_s1_product(
     mgrs_tile_id: str,
     track_number: int | list[int],
     post_date: datetime | pd.Timestamp | str,
-    lookback_strategy: str = 'multi_window',
+    lookback_strategy: str = 'immediate_lookback',
     post_date_buffer_days: int = 1,
     max_pre_imgs_per_burst: int = 10,
     max_pre_imgs_per_burst_mw: list[int] = [5, 5],
@@ -183,7 +183,7 @@ def enumerate_one_dist_s1_product(
 def enumerate_dist_s1_products(
     df_rtc_ts: gpd.GeoDataFrame,
     mgrs_tile_ids: list[str],
-    lookback_strategy: str = 'multi_window',
+    lookback_strategy: str = 'immediate_lookback',
     max_pre_imgs_per_burst: int = 10,
     max_pre_imgs_per_burst_mw: list[int] = [5, 5],
     min_pre_imgs_per_burst: int = 2,
