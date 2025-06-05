@@ -1,6 +1,6 @@
 import geopandas as gpd
-from pandera import Column, DataFrameSchema
 from pandera.engines.pandas_engine import DateTime
+from pandera.pandas import Column, DataFrameSchema
 
 
 burst_schema = DataFrameSchema(
