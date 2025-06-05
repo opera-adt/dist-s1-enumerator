@@ -5,7 +5,7 @@ import geopandas as gpd
 import pandas as pd
 import pytest
 from pandas.testing import assert_frame_equal
-from pandera import check_input
+from pandera.pandas import check_input
 from pytest_mock import MockerFixture
 
 from dist_s1_enumerator.data_models import rtc_s1_resp_schema, rtc_s1_schema
