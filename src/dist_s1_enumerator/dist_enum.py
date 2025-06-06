@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import geopandas as gpd
 import pandas as pd
-from pandera import check_input
+from pandera.pandas import check_input
 from tqdm.auto import tqdm
 
 from dist_s1_enumerator.asf import get_rtc_s1_metadata_from_acq_group

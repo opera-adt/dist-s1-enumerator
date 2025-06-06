@@ -1,13 +1,11 @@
 import os
 from collections.abc import Callable, Generator
-from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 
 
-@contextmanager
-@pytest.fixture
+@pytest.fixture(scope='session')
 def change_local_dir() -> Generator[Callable[[Path], Path], None, None]:
     """Fixture to temporarily change the working directory."""
     original_dir = Path.cwd()
@@ -24,7 +22,7 @@ def change_local_dir() -> Generator[Callable[[Path], Path], None, None]:
     assert Path.cwd() == original_dir
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def test_dir() -> Path:
     """Fixture to provide the path to the test directory."""
     test_dir = Path(__file__).parent

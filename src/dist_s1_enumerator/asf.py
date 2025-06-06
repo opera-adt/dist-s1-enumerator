@@ -4,7 +4,7 @@ from warnings import warn
 import asf_search as asf
 import geopandas as gpd
 import pandas as pd
-from pandera import check_input
+from pandera.pandas import check_input
 from rasterio.crs import CRS
 from shapely.geometry import shape
 

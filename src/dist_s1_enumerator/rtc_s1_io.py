@@ -4,7 +4,7 @@ from pathlib import Path
 import backoff
 import geopandas as gpd
 import requests
-from pandera import check_input
+from pandera.pandas import check_input
 from rasterio.errors import RasterioIOError
 from requests.exceptions import HTTPError
 from tqdm.auto import tqdm
