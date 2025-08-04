@@ -6,7 +6,7 @@ from dist_s1_enumerator.asf import get_rtc_s1_ts_metadata_from_mgrs_tiles
 from dist_s1_enumerator.dist_enum import enumerate_dist_s1_products
 
 
-def update_dist_s1_input_dict(data_dict: dict):
+def update_dist_s1_input_dict(data_dict: dict) -> dict:
     out = {}
     out.update(
         {
@@ -24,7 +24,7 @@ def update_dist_s1_input_dict(data_dict: dict):
     return out_formatted
 
 
-def enumerate_dist_s1_inputs(
+def enumerate_dist_s1_workflow_inputs(
     mgrs_tile_ids: list[str] | str,
     track_numbers: list[int] | int,
     start_acq_dt: datetime | str | None = None,

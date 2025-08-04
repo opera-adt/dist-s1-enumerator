@@ -7,6 +7,7 @@ from dist_s1_enumerator.asf import (
     get_rtc_s1_ts_metadata_from_mgrs_tiles,
 )
 from dist_s1_enumerator.dist_enum import enumerate_dist_s1_products, enumerate_one_dist_s1_product
+from dist_s1_enumerator.dist_enum_inputs import enumerate_dist_s1_workflow_inputs
 from dist_s1_enumerator.mgrs_burst_data import (
     get_burst_ids_in_mgrs_tiles,
     get_burst_table,
@@ -37,7 +38,7 @@ __all__ = [
     'agg_rtc_metadata_by_burst_id',
     'enumerate_dist_s1_products',
     'enumerate_dist_s1_products',
-    'enumerate_one_dist_s1_product',
+    'enumerate_dist_s1_workflow_inputs',
     'enumerate_one_dist_s1_product',
     'get_burst_ids_in_mgrs_tiles',
     'get_burst_table_from_mgrs_tiles',
