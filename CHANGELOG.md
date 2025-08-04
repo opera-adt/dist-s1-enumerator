@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.10] - 2025-06-06
+
+### Changed
+- `multi_window` is now the default parameter
+- Consolidated `*_mw` and other parameters for single API.
+- Assumes 3 anniversary dates for multi_window strategy
+
+### Fixed
+- New pandera import works only on 0.24.0
+- Allow for acquisition metadata to be obtained around anniversary date 
+- Typing of functions.
+
+### Removed
+- print statements
+
+### Added
+- `reorder_columns` can accept empty dataframes and creates empty table with schema (important for longer number of pre-image anniversaries), where there may be no acquisitions available.
+- More docstring information on the enumeration functions
+- Function to get inputs for triggering `dist-s1` workflow (not necessarily all the RTC input data).
+
+
 ## [0.0.9] - 2025-06-06
 
 ### Fixed

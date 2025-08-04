@@ -69,6 +69,7 @@ def test_dist_enum_default(mgrs_tile_ids: list[str], track_numbers: list[int] | 
     df_products = enumerate_dist_s1_products(
         df_rtc_s1_ts,
         mgrs_tile_ids,
+        lookback_strategy='immediate_lookback',
         delta_lookback_days=delta_lookback_days,
         delta_window_days=delta_window_days,
         max_pre_imgs_per_burst=max_pre_imgs_per_burst,
@@ -132,6 +133,7 @@ def test_dist_enum_default(mgrs_tile_ids: list[str], track_numbers: list[int] | 
             mgrs_tile_id,
             track_numbers_post,
             pd.Timestamp(post_date),
+            lookback_strategy='immediate_lookback',
             delta_lookback_days=delta_lookback_days,
             delta_window_days=delta_lookback_days,
             max_pre_imgs_per_burst=max_pre_imgs_per_burst,
@@ -181,6 +183,7 @@ def test_burst_ids_consistent_between_pre_and_post(mgrs_tile_ids: list[str], tra
     df_products = enumerate_dist_s1_products(
         df_rtc_s1_ts,
         mgrs_tile_ids,
+        lookback_strategy='immediate_lookback',
         delta_lookback_days=delta_lookback_days,
         delta_window_days=delta_window_days,
         max_pre_imgs_per_burst=max_pre_imgs_per_burst,
@@ -260,6 +263,7 @@ def test_errors_for_one_product_with_not_enough_pre_images(
                     mgrs_tile_id,
                     track_numbers[0],
                     pd.Timestamp(bad_post_date),
+                    lookback_strategy='immediate_lookback',
                     delta_lookback_days=delta_lookback_days,
                     delta_window_days=delta_window_days,
                     max_pre_imgs_per_burst=max_pre_imgs_per_burst,
