@@ -75,6 +75,9 @@ def enumerate_one_dist_s1_product(
     Returns
     -------
     gpd.GeoDataFrame
+        DataFrame containing enumerated DIST-S1 products and the requisite OPERA RTC-S1 inputs and metadata.
+        This is used within some of the DIST-S1 workflows to enumerate the requisited pre- and post-image inputs.
+        The metadata includes polarization, url, burst_id, etc.
     """
     params = lookback_strategy_params(
         lookback_strategy=lookback_strategy,
@@ -158,35 +161,38 @@ def enumerate_one_dist_s1_product(
             f'Unsupported lookback_strategy: {lookback_strategy}. Expected "multi_window" or "immediate_lookback".'
         )
 
-    pre_counts = df_rtc_pre.groupby('jpl_burst_id').size()
-    burst_ids_with_min_pre_images = pre_counts[pre_counts >= params.min_pre_imgs_per_burst].index.tolist()
-    df_rtc_pre = df_rtc_pre[df_rtc_pre.jpl_burst_id.isin(burst_ids_with_min_pre_images)].reset_index(drop=True)
+    if not df_rtc_pre.empty:
+        pre_counts = df_rtc_pre.groupby('jpl_burst_id').size()
+        burst_ids_with_min_pre_images = pre_counts[pre_counts >= params.min_pre_imgs_per_burst].index.tolist()
+        df_rtc_pre = df_rtc_pre[df_rtc_pre.jpl_burst_id.isin(burst_ids_with_min_pre_images)].reset_index(drop=True)
 
-    post_burst_ids = df_rtc_post.jpl_burst_id.unique().tolist()
-    pre_burst_ids = df_rtc_post.jpl_burst_id.unique().tolist()
+        post_burst_ids = df_rtc_post.jpl_burst_id.unique().tolist()
+        pre_burst_ids = df_rtc_post.jpl_burst_id.unique().tolist()
 
-    final_burst_ids = list(set(post_burst_ids) & set(pre_burst_ids))
-    df_rtc_pre = df_rtc_pre[df_rtc_pre.jpl_burst_id.isin(final_burst_ids)].reset_index(drop=True)
-    df_rtc_post = df_rtc_post[df_rtc_post.jpl_burst_id.isin(final_burst_ids)].reset_index(drop=True)
+        final_burst_ids = list(set(post_burst_ids) & set(pre_burst_ids))
+        df_rtc_pre = df_rtc_pre[df_rtc_pre.jpl_burst_id.isin(final_burst_ids)].reset_index(drop=True)
+        df_rtc_post = df_rtc_post[df_rtc_post.jpl_burst_id.isin(final_burst_ids)].reset_index(drop=True)
 
-    if df_rtc_pre.empty:
-        raise ValueError(
-            f'Not enough RTC-S1 pre-images found for track {track_number} in MGRS tile {mgrs_tile_id} '
-            'with available pre-images.'
-        )
-    if df_rtc_post.empty:
-        raise ValueError(
-            f'Not enough RTC-S1 post-images found for track {track_number} in MGRS tile {mgrs_tile_id} '
-            'with available pre-images.'
-        )
+        if df_rtc_pre.empty:
+            raise ValueError(
+                f'Not enough RTC-S1 pre-images found for track {track_number} in MGRS tile {mgrs_tile_id} '
+                'with available pre-images.'
+            )
+        if df_rtc_post.empty:
+            raise ValueError(
+                f'Not enough RTC-S1 post-images found for track {track_number} in MGRS tile {mgrs_tile_id} '
+                'with available pre-images.'
+            )
 
-    df_rtc_pre['input_category'] = 'pre'
-    df_rtc_post['input_category'] = 'post'
+        df_rtc_pre['input_category'] = 'pre'
+        df_rtc_post['input_category'] = 'post'
 
-    df_rtc_product = pd.concat([df_rtc_pre, df_rtc_post], axis=0).reset_index(drop=True)
+        df_rtc_product = pd.concat([df_rtc_pre, df_rtc_post], axis=0).reset_index(drop=True)
 
-    # Validation
-    dist_s1_input_schema.validate(df_rtc_product)
+        # Validation
+        dist_s1_input_schema.validate(df_rtc_product)
+    else:
+        df_rtc_product = gpd.GeoDataFrame()
     df_rtc_product = reorder_columns(df_rtc_product, dist_s1_input_schema)
 
     return df_rtc_product
@@ -207,6 +213,9 @@ def enumerate_dist_s1_products(
     Enumerate DIST-S1 products from a stack of RTC-S1 metadata and a list of MGRS tiles.
 
     This function avoids repeated calls to the ASF DAAC API by working from a local stack of RTC-S1 metadata.
+
+    This enumeration finds all the available post-image dates from a given stack of RTC-S1 inputs.
+
 
     Parameters
     ----------
@@ -246,7 +255,7 @@ def enumerate_dist_s1_products(
     Returns
     -------
     gpd.GeoDataFrame
-        DataFrame containing enumerated DIST-S1 product inputs.
+        DataFrame containing enumerated OPERA RTC-S1 input metadata including polarization, url, burst_id, etc.
     """
     params = lookback_strategy_params(
         lookback_strategy=lookback_strategy,
