@@ -38,11 +38,8 @@ class lookback_strategy_params(BaseModel):
         if lookback_strategy == 'immediate_lookback':
             if isinstance(v, list | tuple):
                 raise ValueError('max_pre_imgs_per_burst must be a single integer for immediate lookback strategy.')
-            if not isinstance(v, int):
-                raise ValueError('max_pre_imgs_per_burst must be an integer for immediate lookback strategy.')
 
         elif lookback_strategy == 'multi_window':
-            # Convert single int to tuple of 3 for multi_window strategy
             if isinstance(v, int):
                 v = (v,) * 3
             elif isinstance(v, list):
@@ -64,7 +61,6 @@ class lookback_strategy_params(BaseModel):
                 raise ValueError('delta_lookback_days must be 0 for immediate lookback strategy.')
 
         elif lookback_strategy == 'multi_window':
-            # Convert single int to tuple matching length of max_pre_imgs_per_burst
             if isinstance(v, int):
                 if isinstance(max_pre_imgs_per_burst, list | tuple):
                     v = (v,) * len(max_pre_imgs_per_burst)
@@ -73,7 +69,6 @@ class lookback_strategy_params(BaseModel):
             elif isinstance(v, list):
                 v = tuple(v)
 
-            # Validate lengths match for multi_window
             if isinstance(max_pre_imgs_per_burst, list | tuple) and len(v) != len(max_pre_imgs_per_burst):
                 raise ValueError(
                     'max_pre_imgs_per_burst and delta_lookback_days must have the same length. '
