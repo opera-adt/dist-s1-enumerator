@@ -36,7 +36,7 @@ class lookback_strategy_params(BaseModel):
         lookback_strategy = info.data.get('lookback_strategy')
 
         if lookback_strategy == 'immediate_lookback':
-            if isinstance(v, (list, tuple)):
+            if isinstance(v, list | tuple):
                 raise ValueError('max_pre_imgs_per_burst must be a single integer for immediate lookback strategy.')
             if not isinstance(v, int):
                 raise ValueError('max_pre_imgs_per_burst must be an integer for immediate lookback strategy.')
@@ -66,7 +66,7 @@ class lookback_strategy_params(BaseModel):
         elif lookback_strategy == 'multi_window':
             # Convert single int to tuple matching length of max_pre_imgs_per_burst
             if isinstance(v, int):
-                if isinstance(max_pre_imgs_per_burst, (list, tuple)):
+                if isinstance(max_pre_imgs_per_burst, list | tuple):
                     v = (v,) * len(max_pre_imgs_per_burst)
                 else:
                     v = (v,) * 3  # Default to 3 if max_pre_imgs_per_burst is still an int
@@ -74,7 +74,7 @@ class lookback_strategy_params(BaseModel):
                 v = tuple(v)
 
             # Validate lengths match for multi_window
-            if isinstance(max_pre_imgs_per_burst, (list, tuple)) and len(v) != len(max_pre_imgs_per_burst):
+            if isinstance(max_pre_imgs_per_burst, list | tuple) and len(v) != len(max_pre_imgs_per_burst):
                 raise ValueError(
                     'max_pre_imgs_per_burst and delta_lookback_days must have the same length. '
                     'If max_pre_imgs_per_burst is a single integer, this is interpreted as the maximum '
@@ -96,7 +96,7 @@ class lookback_strategy_params(BaseModel):
                 raise ValueError('max_pre_imgs_per_burst must be greater than min_pre_imgs_per_burst')
 
         elif lookback_strategy == 'multi_window':
-            if isinstance(max_pre_imgs_per_burst, (list, tuple)):
+            if isinstance(max_pre_imgs_per_burst, list | tuple):
                 if any(m < v for m in max_pre_imgs_per_burst):
                     raise ValueError('All values in max_pre_imgs_per_burst must be greater than min_pre_imgs_per_burst')
             if isinstance(max_pre_imgs_per_burst, int) and max_pre_imgs_per_burst < v:
