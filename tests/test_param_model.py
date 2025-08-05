@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from dist_s1_enumerator.param_models import lookback_strategy_params
+from dist_s1_enumerator.param_models import LookbackStrategyParams
 
 
 class TestLookbackStrategyParams:
@@ -10,7 +10,7 @@ class TestLookbackStrategyParams:
     def test_multi_window_mismatched_tuple_lengths(self) -> None:
         """Test validation error when delta_lookback_days and max_pre_imgs_per_burst have different lengths."""
         with pytest.raises(ValidationError, match='must have the same length'):
-            lookback_strategy_params(
+            LookbackStrategyParams(
                 lookback_strategy='multi_window',
                 max_pre_imgs_per_burst=(5, 4, 3),  # Length 3
                 delta_lookback_days=(365, 730),  # Length 2 - should fail
@@ -21,7 +21,7 @@ class TestLookbackStrategyParams:
     def test_multi_window_min_greater_than_max_tuple(self) -> None:
         """Test validation error when min_pre_imgs_per_burst > max_pre_imgs_per_burst (tuple case)."""
         with pytest.raises(ValidationError, match='must be greater than min_pre_imgs_per_burst'):
-            lookback_strategy_params(
+            LookbackStrategyParams(
                 lookback_strategy='multi_window',
                 max_pre_imgs_per_burst=(5, 4, 3),
                 delta_lookback_days=(365, 730, 1095),
@@ -32,7 +32,7 @@ class TestLookbackStrategyParams:
     def test_multi_window_min_greater_than_max_int(self) -> None:
         """Test validation error when min_pre_imgs_per_burst > max_pre_imgs_per_burst (int case)."""
         with pytest.raises(ValidationError, match='must be greater than min_pre_imgs_per_burst'):
-            lookback_strategy_params(
+            LookbackStrategyParams(
                 lookback_strategy='multi_window',
                 max_pre_imgs_per_burst=5,
                 delta_lookback_days=365,
@@ -43,7 +43,7 @@ class TestLookbackStrategyParams:
     def test_immediate_lookback_delta_days_tuple_error(self) -> None:
         """Test validation error when delta_lookback_days is not 0 for immediate_lookback."""
         with pytest.raises(ValidationError, match='delta_lookback_days must be 0 for immediate lookback strategy'):
-            lookback_strategy_params(
+            LookbackStrategyParams(
                 lookback_strategy='immediate_lookback',
                 max_pre_imgs_per_burst=5,
                 delta_lookback_days=365,  # Should be 0 for immediate_lookback
@@ -54,7 +54,7 @@ class TestLookbackStrategyParams:
     def test_immediate_lookback_max_pre_imgs_tuple_error(self) -> None:
         """Test validation error when max_pre_imgs_per_burst is tuple for immediate_lookback."""
         with pytest.raises(ValidationError, match='must be a single integer for immediate lookback strategy'):
-            lookback_strategy_params(
+            LookbackStrategyParams(
                 lookback_strategy='immediate_lookback',
                 max_pre_imgs_per_burst=(5, 4, 3),  # Should be int for immediate_lookback
                 delta_lookback_days=0,
@@ -65,7 +65,7 @@ class TestLookbackStrategyParams:
     def test_immediate_lookback_min_greater_than_max(self) -> None:
         """Test validation error when min_pre_imgs_per_burst > max_pre_imgs_per_burst for immediate_lookback."""
         with pytest.raises(ValidationError, match='must be greater than min_pre_imgs_per_burst'):
-            lookback_strategy_params(
+            LookbackStrategyParams(
                 lookback_strategy='immediate_lookback',
                 max_pre_imgs_per_burst=5,
                 delta_lookback_days=0,
@@ -76,7 +76,7 @@ class TestLookbackStrategyParams:
     def test_multi_window_equivalent_configurations(self) -> None:
         """Test that different ways of specifying multi_window configuration are equivalent."""
         # Configuration 1: All as integers
-        config1 = lookback_strategy_params(
+        config1 = LookbackStrategyParams(
             lookback_strategy='multi_window',
             max_pre_imgs_per_burst=5,
             delta_lookback_days=365,
@@ -85,7 +85,7 @@ class TestLookbackStrategyParams:
         )
 
         # Configuration 2: Explicit tuples with calculated values
-        config2 = lookback_strategy_params(
+        config2 = LookbackStrategyParams(
             lookback_strategy='multi_window',
             max_pre_imgs_per_burst=(5, 5, 5),
             delta_lookback_days=(1095, 730, 365),  # 3*365, 2*365, 1*365
@@ -94,7 +94,7 @@ class TestLookbackStrategyParams:
         )
 
         # Configuration 3: Mixed - tuple for max, int for delta (should expand to tuple)
-        config3 = lookback_strategy_params(
+        config3 = LookbackStrategyParams(
             lookback_strategy='multi_window',
             max_pre_imgs_per_burst=(5, 5, 5),
             delta_lookback_days=365,
@@ -124,7 +124,7 @@ class TestLookbackStrategyParams:
 
     def test_multi_window_list_to_tuple_conversion(self) -> None:
         """Test that lists are properly converted to tuples for multi_window strategy."""
-        config = lookback_strategy_params(
+        config = LookbackStrategyParams(
             lookback_strategy='multi_window',
             max_pre_imgs_per_burst=[5, 4, 3],  # List input
             delta_lookback_days=[365, 730, 1095],  # List input
@@ -141,7 +141,7 @@ class TestLookbackStrategyParams:
     def test_delta_window_days_validation(self) -> None:
         """Test validation of delta_window_days > 365."""
         with pytest.raises(ValidationError, match='delta_window_days must be less than 365 days'):
-            lookback_strategy_params(
+            LookbackStrategyParams(
                 lookback_strategy='multi_window',
                 max_pre_imgs_per_burst=5,
                 delta_lookback_days=365,
@@ -152,7 +152,7 @@ class TestLookbackStrategyParams:
     def test_invalid_lookback_strategy(self) -> None:
         """Test validation error for invalid lookback_strategy."""
         with pytest.raises(ValidationError, match='lookback_strategy must be one of'):
-            lookback_strategy_params(
+            LookbackStrategyParams(
                 lookback_strategy='invalid_strategy',
                 max_pre_imgs_per_burst=5,
                 delta_lookback_days=365,
@@ -162,7 +162,7 @@ class TestLookbackStrategyParams:
 
     def test_valid_immediate_lookback_configuration(self) -> None:
         """Test a valid immediate_lookback configuration."""
-        config = lookback_strategy_params(
+        config = LookbackStrategyParams(
             lookback_strategy='immediate_lookback',
             max_pre_imgs_per_burst=5,
             delta_lookback_days=0,
@@ -178,7 +178,7 @@ class TestLookbackStrategyParams:
 
     def test_valid_multi_window_configuration(self) -> None:
         """Test a valid multi_window configuration."""
-        config = lookback_strategy_params(
+        config = LookbackStrategyParams(
             lookback_strategy='multi_window',
             max_pre_imgs_per_burst=(5, 4, 3),
             delta_lookback_days=(365, 730, 1095),

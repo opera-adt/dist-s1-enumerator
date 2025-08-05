@@ -1,6 +1,8 @@
 import warnings
 from importlib.metadata import PackageNotFoundError, version
 
+import asf_search
+
 from dist_s1_enumerator.asf import (
     agg_rtc_metadata_by_burst_id,
     get_rtc_s1_metadata_from_acq_group,
@@ -31,7 +33,8 @@ except PackageNotFoundError:
         '   python -m pip install -e .\n',
         RuntimeWarning,
     )
-
+# Increase CMR timeout to 2 minutes
+asf_search.constants.INTERNAL.CMR_TIMEOUT = 120
 
 __all__ = [
     'agg_rtc_metadata_by_burst_id',

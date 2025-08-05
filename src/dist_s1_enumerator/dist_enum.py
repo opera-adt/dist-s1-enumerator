@@ -6,7 +6,7 @@ from pandera.pandas import check_input
 from tqdm.auto import tqdm
 
 from dist_s1_enumerator.asf import get_rtc_s1_metadata_from_acq_group
-from dist_s1_enumerator.param_models import lookback_strategy_params
+from dist_s1_enumerator.param_models import LookbackStrategyParams
 from dist_s1_enumerator.tabular_models import dist_s1_input_schema, reorder_columns, rtc_s1_schema
 
 
@@ -79,7 +79,7 @@ def enumerate_one_dist_s1_product(
         This is used within some of the DIST-S1 workflows to enumerate the requisited pre- and post-image inputs.
         The metadata includes polarization, url, burst_id, etc.
     """
-    params = lookback_strategy_params(
+    params = LookbackStrategyParams(
         lookback_strategy=lookback_strategy,
         max_pre_imgs_per_burst=max_pre_imgs_per_burst,
         delta_lookback_days=delta_lookback_days,
@@ -257,7 +257,7 @@ def enumerate_dist_s1_products(
     gpd.GeoDataFrame
         DataFrame containing enumerated OPERA RTC-S1 input metadata including polarization, url, burst_id, etc.
     """
-    params = lookback_strategy_params(
+    params = LookbackStrategyParams(
         lookback_strategy=lookback_strategy,
         max_pre_imgs_per_burst=max_pre_imgs_per_burst,
         delta_lookback_days=delta_lookback_days,

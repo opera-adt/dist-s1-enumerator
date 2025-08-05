@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ValidationInfo, field_validator
 
 
-class lookback_strategy_params(BaseModel):
+class LookbackStrategyParams(BaseModel):
     """Pydantic model for validating lookback strategy parameters."""
 
     lookback_strategy: str
@@ -63,9 +63,9 @@ class lookback_strategy_params(BaseModel):
         elif lookback_strategy == 'multi_window':
             if isinstance(v, int):
                 if isinstance(max_pre_imgs_per_burst, list | tuple):
-                    v = (v,) * len(max_pre_imgs_per_burst)
+                    v = tuple(v * i for i in range(1, len(max_pre_imgs_per_burst) + 1))
                 else:
-                    v = (v,) * 3  # Default to 3 if max_pre_imgs_per_burst is still an int
+                    v = tuple(v * i for i in range(1, 3 + 1))  # Default to 3 if max_pre_imgs_per_burst is still an int
             elif isinstance(v, list):
                 v = tuple(v)
 

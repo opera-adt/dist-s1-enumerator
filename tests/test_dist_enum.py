@@ -9,10 +9,14 @@ from pandera.pandas import check_input
 from pytest_mock import MockerFixture
 
 from dist_s1_enumerator.dist_enum import enumerate_dist_s1_products, enumerate_one_dist_s1_product
+from dist_s1_enumerator.param_models import LookbackStrategyParams
 from dist_s1_enumerator.tabular_models import rtc_s1_resp_schema, rtc_s1_schema
 
 
-def read_rtc_s1_ts(mgrs_tile_ids: list[str] | str, track_numbers: list[int] | None = None) -> gpd.GeoDataFrame:
+def read_rtc_s1_ts(
+    mgrs_tile_ids: list[str] | str,
+    track_numbers: list[int] | None = None,
+) -> gpd.GeoDataFrame:
     if isinstance(mgrs_tile_ids, str):
         raise TypeError('mgrs_tile_ids must be a list')
     mgrs_tile_token = '_'.join(mgrs_tile_ids)
@@ -48,19 +52,25 @@ def mock_response_from_asf_daac(
 
 
 @pytest.mark.parametrize(
-    'mgrs_tile_ids, track_numbers',
+    'mgrs_tile_ids,track_numbers,lookback_strategy,delta_lookback_days,delta_window_days,'
+    'max_pre_imgs_per_burst,min_pre_imgs_per_burst',
     [
-        (['15RXN'], [63]),  # Waxlake delta, VV+VH
-        (['22WFD'], None),  # greenland, all tracks, and HH+HV
-        (['11SLT', '11SLU', '11SMT'], None),  # multiple MGRS tiles over Los Angeles
-        (['01UBT'], None),  # Aleutian Chain at the antimeridian
+        (['15RXN'], [63], 'immediate_lookback', 0, 365, 10, 2),  # Waxlake delta, VV+VH
+        (['22WFD'], None, 'immediate_lookback', 0, 365, 10, 2),  # greenland, all tracks, and HH+HV
+        (
+            ['11SLT', '11SLU', '11SMT'],
+            None,
+            'immediate_lookback',
+            0,
+            365,
+            10,
+            2,
+        ),  # multiple MGRS tiles over Los Angeles
+        (['01UBT'], None, 'immediate_lookback', 0, 365, 10, 2),  # Aleutian Chain at the antimeridian
+        (['15RXN'], [63], 'multi_window', 365, 365, (5, 5, 5), 1),  # Waxlake delta, VV+VH
     ],
 )
-@pytest.mark.parametrize(
-    'lookback_strategy, delta_lookback_days, delta_window_days, max_pre_imgs_per_burst, min_pre_imgs_per_burst',
-    [('immediate_lookback', 0, 365, 10, 2)],
-)
-def test_dist_enum_default(
+def test_dist_enum_default_strategies(
     lookback_strategy: str,
     delta_lookback_days: int | list[int] | tuple[int, ...],
     delta_window_days: int | list[int] | tuple[int, ...],
@@ -75,6 +85,13 @@ def test_dist_enum_default(
 
     df_rtc_s1_ts = read_rtc_s1_ts(mgrs_tile_ids, track_numbers=track_numbers)
 
+    params = LookbackStrategyParams(
+        lookback_strategy=lookback_strategy,
+        delta_lookback_days=delta_lookback_days,
+        delta_window_days=delta_window_days,
+        max_pre_imgs_per_burst=max_pre_imgs_per_burst,
+        min_pre_imgs_per_burst=min_pre_imgs_per_burst,
+    )
     df_products = enumerate_dist_s1_products(
         df_rtc_s1_ts,
         mgrs_tile_ids,
@@ -117,17 +134,42 @@ def test_dist_enum_default(
         )
         for post_date, track_numbers_post, mgrs_tile_id in zip(post_dates, track_numbers_post_lst, mgrs_tile_ids_post)
     ]
-    dfs_pre = [
-        mock_response_from_asf_daac(
-            df_rtc_s1_ts,
-            pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(delta_window_days + delta_lookback_days + 1, unit='D'),
-            pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(delta_lookback_days + 1, unit='D'),
-            track_numbers_post,
-            mgrs_tile_id,
-        )
-        for post_date, track_numbers_post, mgrs_tile_id in zip(post_dates, track_numbers_post_lst, mgrs_tile_ids_post)
-    ]
-    side_effects = [df for group in zip(dfs_post, dfs_pre) for df in group]
+    if lookback_strategy == 'immediate_lookback':
+        dfs_pre = [
+            mock_response_from_asf_daac(
+                df_rtc_s1_ts,
+                pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(delta_window_days + delta_lookback_days + 1, unit='D'),
+                pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(delta_lookback_days + 1, unit='D'),
+                track_numbers_post,
+                mgrs_tile_id,
+            )
+            for post_date, track_numbers_post, mgrs_tile_id in zip(
+                post_dates, track_numbers_post_lst, mgrs_tile_ids_post
+            )
+        ]
+        side_effects = [df for group in zip(dfs_post, dfs_pre) for df in group]
+    elif lookback_strategy == 'multi_window':
+        dfs_pre = [
+            mock_response_from_asf_daac(
+                df_rtc_s1_ts,
+                pd.Timestamp(post_date, tz='UTC')
+                - pd.Timedelta(delta_window_days + delta_lookback_day_item + 1, unit='D'),
+                pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(delta_lookback_day_item + 1, unit='D'),
+                track_numbers_post,
+                mgrs_tile_id,
+            )
+            for post_date, track_numbers_post, mgrs_tile_id in zip(
+                post_dates, track_numbers_post_lst, mgrs_tile_ids_post
+            )
+            for delta_lookback_day_item in params.delta_lookback_days
+        ]
+        side_effects = []
+        for k in range(len(dfs_post)):
+            N_lookbacks = len(params.delta_lookback_days)
+            side_effects.append(dfs_post[k])
+            start_pre_idx = k * N_lookbacks
+            end_pre_idx = (k + 1) * N_lookbacks
+            side_effects.extend(dfs_pre[start_pre_idx:end_pre_idx])
 
     mocker.patch('dist_s1_enumerator.asf.get_rtc_s1_ts_metadata_by_burst_ids', side_effect=side_effects)
 
