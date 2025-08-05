@@ -141,8 +141,8 @@ def enumerate_one_dist_s1_product(
             post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
             earliest_lookback = params.delta_window_days + delta_lookback_day
             latest_lookback = delta_lookback_day
-            start_acq_dt = post_date_min - timedelta(days=earliest_lookback)
-            stop_acq_dt = post_date_min - timedelta(days=latest_lookback)
+            start_acq_dt = post_date_min - timedelta(days=latest_lookback)
+            stop_acq_dt = post_date_min - timedelta(days=earliest_lookback)
             df_rtc_pre = get_rtc_s1_metadata_from_acq_group(
                 [mgrs_tile_id],
                 track_numbers=track_numbers,
