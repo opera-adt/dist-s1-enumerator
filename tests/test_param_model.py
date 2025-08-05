@@ -88,7 +88,7 @@ class TestLookbackStrategyParams:
         config2 = LookbackStrategyParams(
             lookback_strategy='multi_window',
             max_pre_imgs_per_burst=(5, 5, 5),
-            delta_lookback_days=(1095, 730, 365),  # 3*365, 2*365, 1*365
+            delta_lookback_days=(365, 730, 1095),  # 1*365, 2*365, 3*365
             min_pre_imgs_per_burst=1,
             delta_window_days=30,
         )
@@ -102,17 +102,18 @@ class TestLookbackStrategyParams:
             delta_window_days=30,
         )
 
+        expected_delta_lookback_days = (365, 730, 1095)
         # Verify that config1 gets normalized to expected tuple formats
         assert config1.max_pre_imgs_per_burst == (5, 5, 5)
-        assert config1.delta_lookback_days == (365, 365, 365)
+        assert config1.delta_lookback_days == expected_delta_lookback_days
 
         # Verify that config2 maintains its explicit values
         assert config2.max_pre_imgs_per_burst == (5, 5, 5)
-        assert config2.delta_lookback_days == (1095, 730, 365)
+        assert config2.delta_lookback_days == expected_delta_lookback_days
 
         # Verify that config3 gets normalized properly
         assert config3.max_pre_imgs_per_burst == (5, 5, 5)
-        assert config3.delta_lookback_days == (365, 365, 365)
+        assert config3.delta_lookback_days == expected_delta_lookback_days
 
         # All should have the same basic structure (same max_pre_imgs_per_burst)
         assert config1.max_pre_imgs_per_burst == config3.max_pre_imgs_per_burst
