@@ -6,36 +6,8 @@ from pandera.pandas import check_input
 from tqdm.auto import tqdm
 
 from dist_s1_enumerator.asf import get_rtc_s1_metadata_from_acq_group
-from dist_s1_enumerator.data_models import dist_s1_input_schema, reorder_columns, rtc_s1_schema
-
-
-def validate_lookback_strategy(
-    lookback_strategy: str,
-    max_pre_imgs_per_burst: int | list[int] | tuple[int, ...],
-    delta_lookback_days: int | list[int] | tuple[int, ...],
-    min_pre_imgs_per_burst: int,
-) -> None:
-    if lookback_strategy == 'immediate_lookback':
-        if isinstance(max_pre_imgs_per_burst, tuple) or isinstance(max_pre_imgs_per_burst, list):
-            raise ValueError('max_pre_imgs_per_burst must be a single integer for immediate lookback strategy.')
-        if delta_lookback_days != 0:
-            raise ValueError('delta_lookback_days must be 0 for immediate lookback strategy.')
-        if max_pre_imgs_per_burst < min_pre_imgs_per_burst:
-            raise ValueError('max_pre_imgs_per_burst must be greater than min_pre_imgs_per_burst')
-    elif lookback_strategy == 'multi_window':
-        if isinstance(max_pre_imgs_per_burst, int):
-            max_pre_imgs_per_burst = (max_pre_imgs_per_burst,) * 3
-        if isinstance(delta_lookback_days, int):
-            delta_lookback_days = (delta_lookback_days,) * len(max_pre_imgs_per_burst)
-        if len(delta_lookback_days) != len(max_pre_imgs_per_burst):
-            raise ValueError(
-                'max_pre_imgs_per_burst and delta_lookback_days must have the same length. '
-                'If max_pre_imgs_per_burst is a single integer, this is interpreted as the maximum '
-                'number of pre-images on 3 anniversary dates so ensure that `delta_lookback_days` '
-                'is a tuple of length 3 or an integer.'
-            )
-        if any(m < min_pre_imgs_per_burst for m in max_pre_imgs_per_burst):
-            raise ValueError('All values in max_pre_imgs_per_burst must be greater than min_pre_imgs_per_burst')
+from dist_s1_enumerator.param_models import lookback_strategy_params
+from dist_s1_enumerator.tabular_models import dist_s1_input_schema, reorder_columns, rtc_s1_schema
 
 
 def enumerate_one_dist_s1_product(
@@ -104,10 +76,13 @@ def enumerate_one_dist_s1_product(
     -------
     gpd.GeoDataFrame
     """
-    validate_lookback_strategy(lookback_strategy, max_pre_imgs_per_burst, delta_lookback_days, min_pre_imgs_per_burst)
-
-    if delta_window_days > 365:
-        raise ValueError('delta_window_days must be less than 365 days.')
+    params = lookback_strategy_params(
+        lookback_strategy=lookback_strategy,
+        max_pre_imgs_per_burst=max_pre_imgs_per_burst,
+        delta_lookback_days=delta_lookback_days,
+        min_pre_imgs_per_burst=min_pre_imgs_per_burst,
+        delta_window_days=delta_window_days,
+    )
 
     if isinstance(post_date, str):
         post_date = pd.Timestamp(post_date)
@@ -144,8 +119,8 @@ def enumerate_one_dist_s1_product(
     if lookback_strategy == 'immediate_lookback':
         # Add 5 minutes buffer to ensure we don't include post-images in pre-image set.
         post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
-        earliest_lookback = delta_window_days + delta_lookback_days
-        latest_lookback = delta_lookback_days
+        earliest_lookback = params.delta_window_days + params.delta_lookback_days
+        latest_lookback = params.delta_lookback_days
         start_acq_dt = post_date_min - timedelta(days=earliest_lookback)
         stop_acq_dt = post_date_min - timedelta(days=latest_lookback)
         df_rtc_pre = get_rtc_s1_metadata_from_acq_group(
@@ -158,10 +133,10 @@ def enumerate_one_dist_s1_product(
 
     elif lookback_strategy == 'multi_window':
         df_rtc_pre_list = []
-        for delta_lookback_day, max_pre_img_per_burst in zip(delta_lookback_days, max_pre_imgs_per_burst):
+        for delta_lookback_day, max_pre_img_per_burst in zip(params.delta_lookback_days, params.max_pre_imgs_per_burst):
             # Add 5 minutes buffer to ensure we don't include post-images in pre-image set.
             post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
-            earliest_lookback = delta_window_days + delta_lookback_day
+            earliest_lookback = params.delta_window_days + delta_lookback_day
             latest_lookback = delta_lookback_day
             start_acq_dt = post_date_min - timedelta(days=earliest_lookback)
             stop_acq_dt = post_date_min - timedelta(days=latest_lookback)
@@ -184,7 +159,7 @@ def enumerate_one_dist_s1_product(
         )
 
     pre_counts = df_rtc_pre.groupby('jpl_burst_id').size()
-    burst_ids_with_min_pre_images = pre_counts[pre_counts >= min_pre_imgs_per_burst].index.tolist()
+    burst_ids_with_min_pre_images = pre_counts[pre_counts >= params.min_pre_imgs_per_burst].index.tolist()
     df_rtc_pre = df_rtc_pre[df_rtc_pre.jpl_burst_id.isin(burst_ids_with_min_pre_images)].reset_index(drop=True)
 
     post_burst_ids = df_rtc_post.jpl_burst_id.unique().tolist()
@@ -271,9 +246,15 @@ def enumerate_dist_s1_products(
     Returns
     -------
     gpd.GeoDataFrame
-        DataFrame containing enumerated DIST-S1 products.
+        DataFrame containing enumerated DIST-S1 product inputs.
     """
-    validate_lookback_strategy(lookback_strategy, max_pre_imgs_per_burst, delta_lookback_days, min_pre_imgs_per_burst)
+    params = lookback_strategy_params(
+        lookback_strategy=lookback_strategy,
+        max_pre_imgs_per_burst=max_pre_imgs_per_burst,
+        delta_lookback_days=delta_lookback_days,
+        min_pre_imgs_per_burst=min_pre_imgs_per_burst,
+        delta_window_days=delta_window_days,
+    )
 
     products = []
     product_id = 0
@@ -296,10 +277,10 @@ def enumerate_dist_s1_products(
                 if lookback_strategy == 'immediate_lookback':
                     # pre-image accounting
                     post_date = df_rtc_post.acq_dt.min()
-                    delta_lookback = pd.Timedelta(delta_lookback_days, unit='D')
-                    delta_window = pd.Timedelta(delta_window_days, unit='D')
-                    window_start = post_date - delta_lookback - delta_window
-                    window_stop = post_date - delta_lookback
+                    delta_lookback_timedelta = pd.Timedelta(params.delta_lookback_days, unit='D')
+                    delta_window_timedelta = pd.Timedelta(params.delta_window_days, unit='D')
+                    window_start = post_date - delta_lookback_timedelta - delta_window_timedelta
+                    window_stop = post_date - delta_lookback_timedelta
 
                     # pre-image filtering
                     # Select pre-images temporally
@@ -329,11 +310,13 @@ def enumerate_dist_s1_products(
                     post_date = df_rtc_post.acq_dt.min()
                     # Loop over the different lookback days
                     df_rtc_pre_list = []
-                    for delta_lookback_day, max_pre_img_per_burst in zip(delta_lookback_days, max_pre_imgs_per_burst):
-                        delta_lookback = pd.Timedelta(delta_lookback_day, unit='D')
-                        delta_window = pd.Timedelta(delta_window_days, unit='D')
-                        window_start = post_date - delta_lookback - delta_window
-                        window_stop = post_date - delta_lookback
+                    for delta_lookback_day, max_pre_img_per_burst in zip(
+                        params.delta_lookback_days, params.max_pre_imgs_per_burst
+                    ):
+                        delta_lookback_timedelta = pd.Timedelta(delta_lookback_day, unit='D')
+                        delta_window_timedelta = pd.Timedelta(params.delta_window_days, unit='D')
+                        window_start = post_date - delta_lookback_timedelta - delta_window_timedelta
+                        window_stop = post_date - delta_lookback_timedelta
 
                         # pre-image filtering
                         # Select pre-images temporally
@@ -376,7 +359,7 @@ def enumerate_dist_s1_products(
 
                 # Remove bursts that don't have minimum number of pre images
                 pre_counts = df_rtc_product[df_rtc_product.input_category == 'pre'].groupby('jpl_burst_id').size()
-                burst_ids_with_min_pre_images = pre_counts[pre_counts >= min_pre_imgs_per_burst].index.tolist()
+                burst_ids_with_min_pre_images = pre_counts[pre_counts >= params.min_pre_imgs_per_burst].index.tolist()
                 df_rtc_product = df_rtc_product[
                     df_rtc_product.jpl_burst_id.isin(burst_ids_with_min_pre_images)
                 ].reset_index(drop=True)

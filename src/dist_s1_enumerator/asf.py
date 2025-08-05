@@ -8,8 +8,8 @@ from pandera.pandas import check_input
 from rasterio.crs import CRS
 from shapely.geometry import shape
 
-from dist_s1_enumerator.data_models import reorder_columns, rtc_s1_resp_schema, rtc_s1_schema
 from dist_s1_enumerator.mgrs_burst_data import get_burst_ids_in_mgrs_tiles, get_lut_by_mgrs_tile_ids
+from dist_s1_enumerator.tabular_models import reorder_columns, rtc_s1_resp_schema, rtc_s1_schema
 
 
 def format_polarization(pol: list | str) -> str:
