@@ -27,7 +27,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - pydantic models for updating/validating with `immediate_lookback` and `multi_window` strategy
 - Function to get inputs for triggering `dist-s1` workflow (not necessarily all the RTC input data).
 - Tests for multi-window lookback strategy
-- 
+- Tests for workflow inputs
 
 
 ## [0.0.9] - 2025-06-06
