@@ -202,7 +202,7 @@ def enumerate_one_dist_s1_product(
 def enumerate_dist_s1_products(
     df_rtc_ts: gpd.GeoDataFrame,
     mgrs_tile_ids: list[str],
-    lookback_strategy: str = 'immediate_lookback',
+    lookback_strategy: str = 'multi_window',
     max_pre_imgs_per_burst: int = 10,
     min_pre_imgs_per_burst: int = 1,
     tqdm_enabled: bool = True,
@@ -377,9 +377,13 @@ def enumerate_dist_s1_products(
                 if not df_rtc_product.empty:
                     products.append(df_rtc_product)
                     product_id += 1
-    df_prods = pd.concat(products, axis=0).reset_index(drop=True)
+    if products:
+        df_prods = pd.concat(products, axis=0).reset_index(drop=True)
+        dist_s1_input_schema.validate(df_prods)
+    else:
+        df_prods = gpd.GeoDataFrame()
 
-    dist_s1_input_schema.validate(df_prods)
     df_prods = reorder_columns(df_prods, dist_s1_input_schema)
+    df_prods = df_prods.sort_values(by=['product_id', 'acq_dt'], ascending=True).reset_index(drop=True)
 
     return df_prods
