@@ -69,8 +69,8 @@ def append_pass_data(df_rtc: gpd.GeoDataFrame, mgrs_tile_ids: list[str]) -> gpd.
 
 def get_rtc_s1_ts_metadata_by_burst_ids(
     burst_ids: str | list[str],
-    start_acq_dt: str | datetime = None,
-    stop_acq_dt: str | datetime = None,
+    start_acq_dt: str | datetime | None | pd.Timestamp = None,
+    stop_acq_dt: str | datetime | None | pd.Timestamp = None,
     polarizations: str | None = None,
 ) -> gpd.GeoDataFrame:
     """Wrap/format the ASF search API for RTC-S1 metadata search. All searches go through this function.
@@ -86,14 +86,23 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     if (polarizations is not None) and (polarizations not in ['HH+HV', 'VV+VH']):
         raise ValueError(f'Invalid polarization: {polarizations}. Must be one of: HH+HV, VV+VH, None.')
 
-    # make sure JPL syntax is transformed to asf syntax
-    burst_ids = [burst_id.upper().replace('-', '_') for burst_id in burst_ids]
+    # Convert all date inputs to datetime objects using pandas for flexibility
+    start_acq_dt_obj = None
+    stop_acq_dt_obj = None
 
-    resp = asf.search(
+    if start_acq_dt is not None:
+        start_acq_dt_obj = pd.to_datetime(start_acq_dt, utc=True).to_pydatetime()
+
+    if stop_acq_dt is not None:
+        stop_acq_dt_obj = pd.to_datetime(stop_acq_dt, utc=True).to_pydatetime()
+
+    # Make sure JPL syntax is transformed to asf syntax
+    burst_ids = [burst_id.upper().replace('-', '_') for burst_id in burst_ids]
+    resp = asf.geo_search(
         operaBurstID=burst_ids,
         processingLevel='RTC',
-        start=start_acq_dt,
-        end=stop_acq_dt,
+        start=start_acq_dt_obj,
+        end=stop_acq_dt_obj,
     )
     if not resp:
         warn('No results - please check burst id and availability.', category=UserWarning)
@@ -113,7 +122,6 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     ]
 
     df_rtc = gpd.GeoDataFrame(properties_f, geometry=geometry, crs=CRS.from_epsg(4326))
-
     # Extract the burst_id from the opera_id
     df_rtc['jpl_burst_id'] = df_rtc['opera_id'].map(lambda bid: bid.split('_')[3])
 
