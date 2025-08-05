@@ -40,32 +40,56 @@ Same as above replacing `pip install dist-s1-enumerator` with `pip install -e .`
 
 ## Usage
 
-See the [Jupyter notebooks](./notebooks) for examples.
+### For triggering DIST-S1 Workflows
+
+```
+workflow_inputs = enumerate_dist_s1_workflow_inputs(mgrs_tile_ids='19HBD',
+                                                    track_numbers=None,
+                                                    start_acq_dt='2023-11-01',
+                                                    stop_acq_dt='2024-04-01',
+                                                    lookback_strategy='multi_window',
+                                                    delta_lookback_days=365,
+                                                    max_pre_imgs_per_burst=5)
+```
+Yields:
+```
+[{'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-11-05', 'track_number': 91},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-11-10', 'track_number': 156},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-11-12', 'track_number': 18}...]
+```
+Where these fields uniquely determine a DIST-S1 product and can be used to trigger the workflow.
+
+### For collecting DIST-S1 inputs
+
+The above example tells us the recent acquisition date that disturbance is made relative to (`post_acq_date`) over an MGRS tile (`mgrs_tile_id`).
+However, there are many OPERA RTC-S1 products used on that given date and to establish a baseline.
+To enumerate all the necessary inputs (which can be further localized with this library), see the [Jupyter notebooks](./notebooks).
 
 - [Enumerating inputs for a single DIST-S1 product](./notebooks/A__Staging_Inputs_for_One_MGRS_Tile.ipynb)
 - [Enumerating inputs for a time-series of DIST-S1 products](./notebooks/B__Enumerate_MGRS_tile.ipynb)
 
-These notebooks provide discussion about how we curate OPERA RTC-S1 inputes for the creation of DIST-S1 products.
-
 ### Identifiers for DIST-S1 products
 
 Of course, knowing all the OPERA RTC-S1 products (pre-images and post-images) necessary for a DIST-S1 product uniquely identifies the products.
-However, this can be upwards of 100 products for each DIST-S1 products and is not human parsable.
+However, all these inputs can be amount to upwards of 100 products for each DIST-S1 product and is not human parsable.
 Thus, it is helpful to know alterate ways to identify and trigger the DIST-S1 product and its' workflow.
 
-Altenrately, we can uniqely identify a DIST-S1 product via its:
+Altenrately, we can uniqely identify a DIST-S1 product via the following fields:
 
 1. MGRS Tile ID
 2. Track Number
 3. Post-image acquisition time (within 1 day)
 
-Each DIST-S1 product is resampled to an MGRS tile, thus explaining 1.
-One might assume that the post-image acquisition time is enough - however, there are particular instances when Sentinel-1 A and Sentinel-1 C will pass each other in the same day and so fixing the track number differentiates between the two sets of imagery; each satellite will collect data from different geometries and thus provide imagery in different fixed spatial bursts.
+As shown in [For triggering DIST-S1 Workflows](#for-triggering-dist-s1-workflows) section, that is precisely the output of `enumerate_dist_s1_workflow_inputs`.
+
+We now explain why these fields uniquely identify DIST-S1 products.
+Each DIST-S1 product is resampled to an MGRS tile.
+One might assume that the post-image acquisition time is enough - however, there are particular instances when Sentinel-1 A and Sentinel-1 C will pass each other in the same day and so fixing the track number differentiates between the two sets of acquisired imagery.
 Thus, it is important to specify the date in addition to the track number.
+In theory, we could specify the exact time of acquisition, but we have elected to use track numbers.
 It is also important to note that we are assuming the selection of pre-images (once a post-image set is selected) is fixed.
 Indeed, varying a baseline of pre-images by which to measure disturbance will alter the final DIST-S1 product.
-While we can modify strategies of pre-image selection using this library, it is not highlighted here. 
-
+Indeed, we can modify strategies of pre-image selection using this library (e.g. `multi_window` vs. `immediate_lookback`), but for DIST-S1 generation which has a fixed strategy with associated parameters, the above 3 fields uniquely identify a DIST-S1 product.
 
 # Testing
 

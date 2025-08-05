@@ -82,5 +82,10 @@ burst_mgrs_lut_schema = DataFrameSchema(
 
 
 def reorder_columns(df: gpd.GeoDataFrame, schema: DataFrameSchema) -> gpd.GeoDataFrame:
-    df = df[[col for col in schema.columns.keys() if col in df.columns]]
+    if not df.empty:
+        df = df[[col for col in schema.columns.keys() if col in df.columns]]
+    else:
+        df = gpd.GeoDataFrame(columns=schema.columns.keys())
+        if 'geometry' in schema.columns.keys():
+            df.set_crs(epsg=4326)
     return df
