@@ -8,8 +8,8 @@ from pandas.testing import assert_frame_equal
 from pandera.pandas import check_input
 from pytest_mock import MockerFixture
 
-from dist_s1_enumerator.data_models import rtc_s1_resp_schema, rtc_s1_schema
 from dist_s1_enumerator.dist_enum import enumerate_dist_s1_products, enumerate_one_dist_s1_product
+from dist_s1_enumerator.tabular_models import rtc_s1_resp_schema, rtc_s1_schema
 
 
 def read_rtc_s1_ts(mgrs_tile_ids: list[str] | str, track_numbers: list[int] | None = None) -> gpd.GeoDataFrame:
@@ -56,20 +56,29 @@ def mock_response_from_asf_daac(
         (['01UBT'], None),  # Aleutian Chain at the antimeridian
     ],
 )
-def test_dist_enum_default(mgrs_tile_ids: list[str], track_numbers: list[int] | None, mocker: MockerFixture) -> None:
+@pytest.mark.parametrize(
+    'lookback_strategy, delta_lookback_days, delta_window_days, max_pre_imgs_per_burst, min_pre_imgs_per_burst',
+    [('immediate_lookback', 0, 365, 10, 2)],
+)
+def test_dist_enum_default(
+    lookback_strategy: str,
+    delta_lookback_days: int | list[int] | tuple[int, ...],
+    delta_window_days: int | list[int] | tuple[int, ...],
+    max_pre_imgs_per_burst: int | list[int] | tuple[int, ...],
+    min_pre_imgs_per_burst: int | list[int] | tuple[int, ...],
+    mgrs_tile_ids: list[str],
+    track_numbers: list[int] | None,
+    mocker: MockerFixture,
+) -> None:
     if not isinstance(mgrs_tile_ids, list):
         raise TypeError('mgrs_tile_ids must be a list')
 
-    delta_window_days = 365
-    delta_lookback_days = 0
-    max_pre_imgs_per_burst = 10
-    min_pre_imgs_per_burst = 2
     df_rtc_s1_ts = read_rtc_s1_ts(mgrs_tile_ids, track_numbers=track_numbers)
 
     df_products = enumerate_dist_s1_products(
         df_rtc_s1_ts,
         mgrs_tile_ids,
-        lookback_strategy='immediate_lookback',
+        lookback_strategy=lookback_strategy,
         delta_lookback_days=delta_lookback_days,
         delta_window_days=delta_window_days,
         max_pre_imgs_per_burst=max_pre_imgs_per_burst,
@@ -133,7 +142,7 @@ def test_dist_enum_default(mgrs_tile_ids: list[str], track_numbers: list[int] | 
             mgrs_tile_id,
             track_numbers_post,
             pd.Timestamp(post_date),
-            lookback_strategy='immediate_lookback',
+            lookback_strategy=lookback_strategy,
             delta_lookback_days=delta_lookback_days,
             delta_window_days=delta_lookback_days,
             max_pre_imgs_per_burst=max_pre_imgs_per_burst,

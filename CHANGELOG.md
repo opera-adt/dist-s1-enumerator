@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.10] - 2025-06-06
+## [1.0.0] - 2025-08-05
 
 ### Changed
 - `multi_window` is now the default parameter
@@ -24,7 +24,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - `reorder_columns` can accept empty dataframes and creates empty table with schema (important for longer number of pre-image anniversaries), where there may be no acquisitions available.
 - More docstring information on the enumeration functions
+- pydantic models for updating/validating with `immediate_lookback` and `multi_window` strategy
 - Function to get inputs for triggering `dist-s1` workflow (not necessarily all the RTC input data).
+- Tests for multi-window lookback strategy
+- 
 
 
 ## [0.0.9] - 2025-06-06
