@@ -8,8 +8,8 @@ from pandera.pandas import check_input
 from rasterio.crs import CRS
 from shapely.geometry import shape
 
-from dist_s1_enumerator.data_models import reorder_columns, rtc_s1_resp_schema, rtc_s1_schema
 from dist_s1_enumerator.mgrs_burst_data import get_burst_ids_in_mgrs_tiles, get_lut_by_mgrs_tile_ids
+from dist_s1_enumerator.tabular_models import reorder_columns, rtc_s1_resp_schema, rtc_s1_schema
 
 
 def format_polarization(pol: list | str) -> str:
@@ -69,8 +69,8 @@ def append_pass_data(df_rtc: gpd.GeoDataFrame, mgrs_tile_ids: list[str]) -> gpd.
 
 def get_rtc_s1_ts_metadata_by_burst_ids(
     burst_ids: str | list[str],
-    start_acq_dt: str | datetime = None,
-    stop_acq_dt: str | datetime = None,
+    start_acq_dt: str | datetime | None | pd.Timestamp = None,
+    stop_acq_dt: str | datetime | None | pd.Timestamp = None,
     polarizations: str | None = None,
 ) -> gpd.GeoDataFrame:
     """Wrap/format the ASF search API for RTC-S1 metadata search. All searches go through this function.
@@ -86,14 +86,23 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     if (polarizations is not None) and (polarizations not in ['HH+HV', 'VV+VH']):
         raise ValueError(f'Invalid polarization: {polarizations}. Must be one of: HH+HV, VV+VH, None.')
 
-    # make sure JPL syntax is transformed to asf syntax
-    burst_ids = [burst_id.upper().replace('-', '_') for burst_id in burst_ids]
+    # Convert all date inputs to datetime objects using pandas for flexibility
+    start_acq_dt_obj = None
+    stop_acq_dt_obj = None
 
-    resp = asf.search(
+    if start_acq_dt is not None:
+        start_acq_dt_obj = pd.to_datetime(start_acq_dt, utc=True).to_pydatetime()
+
+    if stop_acq_dt is not None:
+        stop_acq_dt_obj = pd.to_datetime(stop_acq_dt, utc=True).to_pydatetime()
+
+    # Make sure JPL syntax is transformed to asf syntax
+    burst_ids = [burst_id.upper().replace('-', '_') for burst_id in burst_ids]
+    resp = asf.geo_search(
         operaBurstID=burst_ids,
         processingLevel='RTC',
-        start=start_acq_dt,
-        end=stop_acq_dt,
+        start=start_acq_dt_obj,
+        end=stop_acq_dt_obj,
     )
     if not resp:
         warn('No results - please check burst id and availability.', category=UserWarning)
@@ -113,7 +122,6 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     ]
 
     df_rtc = gpd.GeoDataFrame(properties_f, geometry=geometry, crs=CRS.from_epsg(4326))
-
     # Extract the burst_id from the opera_id
     df_rtc['jpl_burst_id'] = df_rtc['opera_id'].map(lambda bid: bid.split('_')[3])
 
@@ -176,9 +184,9 @@ def get_rtc_s1_metadata_from_acq_group(
     mgrs_tile_ids: list[str],
     track_numbers: list[int],
     n_images_per_burst: int = 1,
-    start_acq_dt: datetime | str = None,
-    stop_acq_dt: datetime | str = None,
-    max_variation_seconds: float = None,
+    start_acq_dt: datetime | str | None = None,
+    stop_acq_dt: datetime | str | None = None,
+    max_variation_seconds: float | None = None,
 ) -> gpd.GeoDataFrame:
     """
     Meant for acquiring a pre-image or post-image set from MGRS tiles for a given S1 pass.
@@ -245,8 +253,9 @@ def get_rtc_s1_metadata_from_acq_group(
         ind = df_rtc['acq_dt'] > max_dt - pd.Timedelta(seconds=max_variation_seconds)
         df_rtc = df_rtc[ind].reset_index(drop=True)
 
-    df_rtc = append_pass_data(df_rtc, mgrs_tile_ids)
-    rtc_s1_schema.validate(df_rtc)
+    if not df_rtc.empty:
+        df_rtc = append_pass_data(df_rtc, mgrs_tile_ids)
+        rtc_s1_schema.validate(df_rtc)
     df_rtc = reorder_columns(df_rtc, rtc_s1_schema)
 
     return df_rtc
@@ -254,9 +263,9 @@ def get_rtc_s1_metadata_from_acq_group(
 
 def get_rtc_s1_ts_metadata_from_mgrs_tiles(
     mgrs_tile_ids: list[str],
-    track_numbers: list[int] = None,
-    start_acq_dt: str | datetime = None,
-    stop_acq_dt: str | datetime = None,
+    track_numbers: list[int] | None = None,
+    start_acq_dt: str | datetime | None = None,
+    stop_acq_dt: str | datetime | None = None,
     polarizations: str | None = None,
 ) -> gpd.GeoDataFrame:
     """Get the RTC S1 time series for a given MGRS tile and track number."""

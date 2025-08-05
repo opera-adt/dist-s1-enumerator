@@ -5,8 +5,8 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point, Polygon
 
-from dist_s1_enumerator.data_models import burst_mgrs_lut_schema, burst_schema, mgrs_tile_schema, reorder_columns
 from dist_s1_enumerator.exceptions import NoMGRSCoverage
+from dist_s1_enumerator.tabular_models import burst_mgrs_lut_schema, burst_schema, mgrs_tile_schema, reorder_columns
 
 
 DATA_DIR = Path(__file__).resolve().parent / 'data'

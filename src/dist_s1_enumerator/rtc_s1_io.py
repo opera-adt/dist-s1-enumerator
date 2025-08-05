@@ -9,7 +9,7 @@ from rasterio.errors import RasterioIOError
 from requests.exceptions import HTTPError
 from tqdm.auto import tqdm
 
-from dist_s1_enumerator.data_models import rtc_s1_schema
+from dist_s1_enumerator.tabular_models import rtc_s1_schema
 
 
 def generate_rtc_s1_local_paths(

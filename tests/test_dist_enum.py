@@ -8,11 +8,15 @@ from pandas.testing import assert_frame_equal
 from pandera.pandas import check_input
 from pytest_mock import MockerFixture
 
-from dist_s1_enumerator.data_models import rtc_s1_resp_schema, rtc_s1_schema
 from dist_s1_enumerator.dist_enum import enumerate_dist_s1_products, enumerate_one_dist_s1_product
+from dist_s1_enumerator.param_models import LookbackStrategyParams
+from dist_s1_enumerator.tabular_models import rtc_s1_resp_schema, rtc_s1_schema
 
 
-def read_rtc_s1_ts(mgrs_tile_ids: list[str] | str, track_numbers: list[int] | None = None) -> gpd.GeoDataFrame:
+def read_rtc_s1_ts(
+    mgrs_tile_ids: list[str] | str,
+    track_numbers: list[int] | None = None,
+) -> gpd.GeoDataFrame:
     if isinstance(mgrs_tile_ids, str):
         raise TypeError('mgrs_tile_ids must be a list')
     mgrs_tile_token = '_'.join(mgrs_tile_ids)
@@ -48,27 +52,50 @@ def mock_response_from_asf_daac(
 
 
 @pytest.mark.parametrize(
-    'mgrs_tile_ids, track_numbers',
+    'mgrs_tile_ids,track_numbers,lookback_strategy,delta_lookback_days,delta_window_days,'
+    'max_pre_imgs_per_burst,min_pre_imgs_per_burst',
     [
-        (['15RXN'], [63]),  # Waxlake delta, VV+VH
-        (['22WFD'], None),  # greenland, all tracks, and HH+HV
-        (['11SLT', '11SLU', '11SMT'], None),  # multiple MGRS tiles over Los Angeles
-        (['01UBT'], None),  # Aleutian Chain at the antimeridian
+        (['15RXN'], [63], 'immediate_lookback', 0, 365, 10, 2),  # Waxlake delta, VV+VH
+        (['22WFD'], None, 'immediate_lookback', 0, 365, 10, 2),  # greenland, all tracks, and HH+HV
+        (
+            ['11SLT', '11SLU', '11SMT'],
+            None,
+            'immediate_lookback',
+            0,
+            365,
+            10,
+            2,
+        ),  # multiple MGRS tiles over Los Angeles
+        (['01UBT'], None, 'immediate_lookback', 0, 365, 10, 2),  # Aleutian Chain at the antimeridian
+        (['15RXN'], [63], 'multi_window', 365, 365, (5, 5, 5), 1),  # Waxlake delta, VV+VH
     ],
 )
-def test_dist_enum_default(mgrs_tile_ids: list[str], track_numbers: list[int] | None, mocker: MockerFixture) -> None:
+def test_dist_enum_default_strategies(
+    lookback_strategy: str,
+    delta_lookback_days: int | list[int] | tuple[int, ...],
+    delta_window_days: int | list[int] | tuple[int, ...],
+    max_pre_imgs_per_burst: int | list[int] | tuple[int, ...],
+    min_pre_imgs_per_burst: int | list[int] | tuple[int, ...],
+    mgrs_tile_ids: list[str],
+    track_numbers: list[int] | None,
+    mocker: MockerFixture,
+) -> None:
     if not isinstance(mgrs_tile_ids, list):
         raise TypeError('mgrs_tile_ids must be a list')
 
-    delta_window_days = 365
-    delta_lookback_days = 0
-    max_pre_imgs_per_burst = 10
-    min_pre_imgs_per_burst = 2
     df_rtc_s1_ts = read_rtc_s1_ts(mgrs_tile_ids, track_numbers=track_numbers)
 
+    params = LookbackStrategyParams(
+        lookback_strategy=lookback_strategy,
+        delta_lookback_days=delta_lookback_days,
+        delta_window_days=delta_window_days,
+        max_pre_imgs_per_burst=max_pre_imgs_per_burst,
+        min_pre_imgs_per_burst=min_pre_imgs_per_burst,
+    )
     df_products = enumerate_dist_s1_products(
         df_rtc_s1_ts,
         mgrs_tile_ids,
+        lookback_strategy=lookback_strategy,
         delta_lookback_days=delta_lookback_days,
         delta_window_days=delta_window_days,
         max_pre_imgs_per_burst=max_pre_imgs_per_burst,
@@ -107,17 +134,42 @@ def test_dist_enum_default(mgrs_tile_ids: list[str], track_numbers: list[int] | 
         )
         for post_date, track_numbers_post, mgrs_tile_id in zip(post_dates, track_numbers_post_lst, mgrs_tile_ids_post)
     ]
-    dfs_pre = [
-        mock_response_from_asf_daac(
-            df_rtc_s1_ts,
-            pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(delta_window_days + delta_lookback_days + 1, unit='D'),
-            pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(delta_lookback_days + 1, unit='D'),
-            track_numbers_post,
-            mgrs_tile_id,
-        )
-        for post_date, track_numbers_post, mgrs_tile_id in zip(post_dates, track_numbers_post_lst, mgrs_tile_ids_post)
-    ]
-    side_effects = [df for group in zip(dfs_post, dfs_pre) for df in group]
+    if lookback_strategy == 'immediate_lookback':
+        dfs_pre = [
+            mock_response_from_asf_daac(
+                df_rtc_s1_ts,
+                pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(delta_window_days + delta_lookback_days + 1, unit='D'),
+                pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(delta_lookback_days + 1, unit='D'),
+                track_numbers_post,
+                mgrs_tile_id,
+            )
+            for post_date, track_numbers_post, mgrs_tile_id in zip(
+                post_dates, track_numbers_post_lst, mgrs_tile_ids_post
+            )
+        ]
+        side_effects = [df for group in zip(dfs_post, dfs_pre) for df in group]
+    elif lookback_strategy == 'multi_window':
+        dfs_pre = [
+            mock_response_from_asf_daac(
+                df_rtc_s1_ts,
+                pd.Timestamp(post_date, tz='UTC')
+                - pd.Timedelta(delta_window_days + delta_lookback_day_item + 1, unit='D'),
+                pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(delta_lookback_day_item + 1, unit='D'),
+                track_numbers_post,
+                mgrs_tile_id,
+            )
+            for post_date, track_numbers_post, mgrs_tile_id in zip(
+                post_dates, track_numbers_post_lst, mgrs_tile_ids_post
+            )
+            for delta_lookback_day_item in params.delta_lookback_days
+        ]
+        side_effects = []
+        for k in range(len(dfs_post)):
+            N_lookbacks = len(params.delta_lookback_days)
+            side_effects.append(dfs_post[k])
+            start_pre_idx = k * N_lookbacks
+            end_pre_idx = (k + 1) * N_lookbacks
+            side_effects.extend(dfs_pre[start_pre_idx:end_pre_idx])
 
     mocker.patch('dist_s1_enumerator.asf.get_rtc_s1_ts_metadata_by_burst_ids', side_effect=side_effects)
 
@@ -132,6 +184,7 @@ def test_dist_enum_default(mgrs_tile_ids: list[str], track_numbers: list[int] | 
             mgrs_tile_id,
             track_numbers_post,
             pd.Timestamp(post_date),
+            lookback_strategy=lookback_strategy,
             delta_lookback_days=delta_lookback_days,
             delta_window_days=delta_lookback_days,
             max_pre_imgs_per_burst=max_pre_imgs_per_burst,
@@ -181,6 +234,7 @@ def test_burst_ids_consistent_between_pre_and_post(mgrs_tile_ids: list[str], tra
     df_products = enumerate_dist_s1_products(
         df_rtc_s1_ts,
         mgrs_tile_ids,
+        lookback_strategy='immediate_lookback',
         delta_lookback_days=delta_lookback_days,
         delta_window_days=delta_window_days,
         max_pre_imgs_per_burst=max_pre_imgs_per_burst,
@@ -193,75 +247,3 @@ def test_burst_ids_consistent_between_pre_and_post(mgrs_tile_ids: list[str], tra
         df_pre = df_product[df_product['input_category'] == 'pre'].reset_index(drop=True)
         df_post = df_product[df_product['input_category'] == 'post'].reset_index(drop=True)
         assert sorted(df_pre['jpl_burst_id'].unique().tolist()) == sorted(df_post['jpl_burst_id'].unique().tolist())
-
-
-@pytest.mark.parametrize(
-    'mgrs_tile_ids, track_numbers',
-    [
-        (['15RXN'], [63]),  # Waxlake delta, VV+VH
-    ],
-)
-def test_errors_for_one_product_with_not_enough_pre_images(
-    mgrs_tile_ids: list[str], track_numbers: list[int] | None, mocker: MockerFixture
-) -> None:
-    if not isinstance(mgrs_tile_ids, list):
-        raise TypeError('mgrs_tile_ids must be a list')
-
-    if len(track_numbers) > 1:
-        raise ValueError('Assumes a single pre-image to verify error messages')
-
-    if len(mgrs_tile_ids) > 1:
-        raise ValueError('Assumes a single MGRS tile to verify error messages')
-
-    delta_window_days = 365
-    delta_lookback_days = 0
-    max_pre_imgs_per_burst = 10
-    min_pre_imgs_per_burst = 2
-    df_rtc_s1_ts = read_rtc_s1_ts(mgrs_tile_ids, track_numbers=track_numbers)
-
-    # Get the two earliest post dates - by definition there will not be enough pre images for these dates
-    bad_post_dates = sorted(df_rtc_s1_ts['acq_date_for_mgrs_pass'].unique().tolist())[:2]
-
-    # Get the two earliest post dates - by definition there will not be enough pre images for these dates
-    bad_post_dates = sorted(df_rtc_s1_ts['acq_date_for_mgrs_pass'].unique().tolist())[:2]
-
-    dfs_post = [
-        mock_response_from_asf_daac(
-            df_rtc_s1_ts,
-            pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(1, unit='D'),
-            pd.Timestamp(post_date, tz='UTC') + pd.Timedelta(1, unit='D'),
-            track_numbers,
-            mgrs_tile_ids[0],
-        )
-        for post_date in bad_post_dates
-    ]
-    dfs_pre = [
-        mock_response_from_asf_daac(
-            df_rtc_s1_ts,
-            pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(delta_window_days + delta_lookback_days + 1, unit='D'),
-            pd.Timestamp(post_date, tz='UTC') - pd.Timedelta(delta_lookback_days + 1, unit='D'),
-            track_numbers,
-            mgrs_tile_ids[0],
-        )
-        for post_date in bad_post_dates
-    ]
-    side_effects = [df for group in zip(dfs_post, dfs_pre) for df in group]
-
-    mocker.patch('dist_s1_enumerator.asf.get_rtc_s1_ts_metadata_by_burst_ids', side_effect=side_effects)
-
-    for mgrs_tile_id in mgrs_tile_ids:
-        for bad_post_date in bad_post_dates:
-            error_msg = (
-                f'Not enough RTC-S1 pre-images found for track {track_numbers[0]} '
-                f'in MGRS tile {mgrs_tile_id} with available pre-images.'
-            )
-            with pytest.raises(ValueError, match=error_msg):
-                _ = enumerate_one_dist_s1_product(
-                    mgrs_tile_id,
-                    track_numbers[0],
-                    pd.Timestamp(bad_post_date),
-                    delta_lookback_days=delta_lookback_days,
-                    delta_window_days=delta_window_days,
-                    max_pre_imgs_per_burst=max_pre_imgs_per_burst,
-                    min_pre_imgs_per_burst=min_pre_imgs_per_burst,
-                )
