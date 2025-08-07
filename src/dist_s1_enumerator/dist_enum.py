@@ -20,6 +20,7 @@ def enumerate_one_dist_s1_product(
     delta_window_days: int = 365,
     delta_lookback_days: int | list[int] | tuple[int, ...] = 365,
     min_pre_imgs_per_burst: int = 1,
+    tqdm_enabled: bool = True,
 ) -> gpd.GeoDataFrame:
     """Enumerate a single product using unique DIST-S1 identifiers.
 
@@ -106,6 +107,7 @@ def enumerate_one_dist_s1_product(
     if isinstance(post_date, pd.Timestamp):
         post_date = post_date.to_pydatetime()
 
+    print(f'Searching for post-images for track {track_number} in MGRS tile {mgrs_tile_id}')
     df_rtc_post = get_rtc_s1_metadata_from_acq_group(
         [mgrs_tile_id],
         track_numbers=track_numbers,
@@ -121,6 +123,8 @@ def enumerate_one_dist_s1_product(
 
     if lookback_strategy == 'immediate_lookback':
         # Add 5 minutes buffer to ensure we don't include post-images in pre-image set.
+        print('Searching for pre-images for immediate_lookback products')
+        print(f'Lookback days {params.delta_lookback_days} and window days {params.delta_window_days}')
         post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
         earliest_lookback = params.delta_window_days + params.delta_lookback_days
         latest_lookback = params.delta_lookback_days
@@ -136,7 +140,15 @@ def enumerate_one_dist_s1_product(
 
     elif lookback_strategy == 'multi_window':
         df_rtc_pre_list = []
-        for delta_lookback_day, max_pre_img_per_burst in zip(params.delta_lookback_days, params.max_pre_imgs_per_burst):
+        zipped_data = list(zip(params.delta_lookback_days, params.max_pre_imgs_per_burst))
+        print('Searching for pre-images for multi_window baseline')
+        print(f'Lookback days {params.delta_lookback_days} and window days {params.delta_window_days}')
+        for delta_lookback_day, max_pre_img_per_burst in tqdm(
+            zipped_data,
+            desc='Windows',
+            dynamic_ncols=True,
+            disable=(not tqdm_enabled),
+        ):
             # Add 5 minutes buffer to ensure we don't include post-images in pre-image set.
             post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
             earliest_lookback = params.delta_window_days + delta_lookback_day
@@ -319,9 +331,8 @@ def enumerate_dist_s1_products(
                     post_date = df_rtc_post.acq_dt.min()
                     # Loop over the different lookback days
                     df_rtc_pre_list = []
-                    for delta_lookback_day, max_pre_img_per_burst in zip(
-                        params.delta_lookback_days, params.max_pre_imgs_per_burst
-                    ):
+                    zipped_data = list(zip(params.delta_lookback_days, params.max_pre_imgs_per_burst))
+                    for delta_lookback_day, max_pre_img_per_burst in zipped_data:
                         delta_lookback_timedelta = pd.Timedelta(delta_lookback_day, unit='D')
                         delta_window_timedelta = pd.Timedelta(params.delta_window_days, unit='D')
                         window_start = post_date - delta_lookback_timedelta - delta_window_timedelta
