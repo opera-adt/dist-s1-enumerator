@@ -1,12 +1,12 @@
 import concurrent.futures
 from pathlib import Path
 
-import backoff
 import geopandas as gpd
 import requests
 from pandera.pandas import check_input
 from rasterio.errors import RasterioIOError
-from requests.exceptions import HTTPError
+from requests.exceptions import HTTPError, RequestException, Timeout
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from tqdm.auto import tqdm
 
 from dist_s1_enumerator.tabular_models import rtc_s1_schema
@@ -54,22 +54,56 @@ def append_local_paths(df_rtc_ts: gpd.GeoDataFrame, data_dir: Path | str) -> lis
     return df_out
 
 
-@backoff.on_exception(
-    backoff.expo,
-    [ConnectionError, HTTPError, RasterioIOError],
-    max_tries=30,
-    max_time=60,
-    jitter=backoff.full_jitter,
+def create_download_session(max_workers: int = 5) -> requests.Session:
+    """Create a requests session with appropriate settings for downloads.
+
+    Args:
+        max_workers: Number of concurrent download threads (used to size connection pool)
+    """
+    session = requests.Session()
+    session.headers.update({'User-Agent': 'dist-s1-enumerator/1.0'})
+
+    # Size connection pool based on concurrent workers
+    pool_maxsize = max(max_workers * 2, 10)
+    pool_maxsize = min(pool_maxsize, 50)
+
+    adapter = requests.adapters.HTTPAdapter(
+        pool_connections=10,
+        pool_maxsize=pool_maxsize,
+        max_retries=0,  # handle retries with tenacity
+    )
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
+
+
+@retry(
+    retry=retry_if_exception_type((ConnectionError, HTTPError, RasterioIOError, Timeout, RequestException)),
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    reraise=True,
 )
-def localize_one_rtc(url: str, out_path: Path) -> Path:
+def localize_one_rtc(url: str, out_path: Path, session: requests.Session | None = None) -> Path:
+    """Download a single RTC file with retry logic."""
     if out_path.exists():
         return out_path
 
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with out_path.open('wb') as f:
-            for chunk in r.iter_content(chunk_size=16384):
-                f.write(chunk)
+    if session is None:
+        session = create_download_session()
+
+    try:
+        with session.get(url, stream=True, timeout=30) as r:
+            r.raise_for_status()
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            with out_path.open('wb') as f:
+                for chunk in r.iter_content(chunk_size=16384):
+                    if chunk:  # filter out keep-alive chunks
+                        f.write(chunk)
+    except Exception:
+        # Clean up partial file on failure
+        if out_path.exists():
+            out_path.unlink()
+        raise
     return out_path
 
 
@@ -79,26 +113,30 @@ def localize_rtc_s1_ts(
     data_dir: Path | str,
     max_workers: int = 5,
     tqdm_enabled: bool = True,
-) -> list[Path]:
+) -> gpd.GeoDataFrame:
     df_out = append_local_paths(df_rtc_ts, data_dir)
     urls = df_out['url_copol'].tolist() + df_out['url_crosspol'].tolist()
     out_paths = df_out['loc_path_copol'].tolist() + df_out['loc_path_crosspol'].tolist()
 
-    def localize_one_rtc_p(data: tuple) -> Path:
-        return localize_one_rtc(*data)
+    # Create shared session for connection pooling, sized for concurrent workers
+    session = create_download_session(max_workers)
+
+    def localize_one_rtc_with_session(data: tuple) -> Path:
+        url, out_path = data
+        return localize_one_rtc(url, out_path, session)
 
     disable_tqdm = not tqdm_enabled
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         _ = list(
             tqdm(
-                executor.map(localize_one_rtc_p, zip(urls, out_paths)),
+                executor.map(localize_one_rtc_with_session, zip(urls, out_paths)),
                 total=len(urls),
                 disable=disable_tqdm,
                 desc='Downloading RTC-S1 burst data',
                 dynamic_ncols=True,
             )
         )
-    # For serliaziation
+    # For serialization
     df_out['loc_path_copol'] = df_out['loc_path_copol'].astype(str)
     df_out['loc_path_crosspol'] = df_out['loc_path_crosspol'].astype(str)
     return df_out
