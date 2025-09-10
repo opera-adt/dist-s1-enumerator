@@ -6,7 +6,7 @@ import requests
 from pandera.pandas import check_input
 from rasterio.errors import RasterioIOError
 from requests.exceptions import HTTPError, RequestException, Timeout
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 from tqdm.auto import tqdm
 
 from dist_s1_enumerator.tabular_models import rtc_s1_schema
