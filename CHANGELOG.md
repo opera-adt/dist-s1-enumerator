@@ -14,12 +14,11 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.0.2] - 2025-09-09
 
-## Changed
+### Changed
 * `backoff` library is removed and we now use `tenacity`
 
-## Added
+### Added
 * Uses sessions and adapters to handle mutiple concurrent requests more reliably.
-
 
 ## [1.0.1] - 2025-08-07
 
