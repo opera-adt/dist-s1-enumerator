@@ -218,7 +218,7 @@ def enumerate_dist_s1_products(
     max_pre_imgs_per_burst: int = (5, 5, 5),
     min_pre_imgs_per_burst: int = 1,
     tqdm_enabled: bool = True,
-    delta_lookback_days: int = 0,
+    delta_lookback_days: int = 365,
     delta_window_days: int = 365,
 ) -> gpd.GeoDataFrame:
     """
@@ -254,7 +254,7 @@ def enumerate_dist_s1_products(
     tqdm_enabled : bool, optional
         Whether to enable tqdm progress bars, by default True.
     delta_lookback_days : int, optional
-        When to set the most recent pre-image date. Default is 0.
+        When to set the most recent pre-image date. Default is 365.
         If lookback strategy is 'multi_window', this means the maximum number of days to search for pre-images on each
         anniversary date where `post_date - n * lookback_days` are the anniversary dates for n = 1,....
         If lookback strategy is 'immediate_lookback', this must be set to 0.
@@ -367,7 +367,6 @@ def enumerate_dist_s1_products(
                     df_rtc_pre_final = (
                         pd.concat(df_rtc_pre_list, ignore_index=True) if df_rtc_pre_list else pd.DataFrame()
                     )
-                    # product and provenance
                     df_rtc_product = pd.concat([df_rtc_pre_final, df_rtc_post]).reset_index(drop=True)
                     df_rtc_product['product_id'] = product_id
 
@@ -385,7 +384,13 @@ def enumerate_dist_s1_products(
                 ].reset_index(drop=True)
 
                 # finalize products
-                if not df_rtc_product.empty:
+                if not df_rtc_product.empty:  # and (not df_rtc_product[df_rtc_product.input_category == 'pre'].empty):
+                    # print(df_rtc_product[df_rtc_product.input_category == 'post'].acq_dt.min())
+                    # if (
+                    #     df_rtc_product[df_rtc_product.input_category == 'post'].acq_dt.min()
+                    #     - pd.Timestamp('2025-04-11', tz='UTC')
+                    # ).days <= 1:
+                    #    breakpoint()
                     products.append(df_rtc_product)
                     product_id += 1
     if products:
