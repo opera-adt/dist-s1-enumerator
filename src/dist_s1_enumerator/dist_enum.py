@@ -384,13 +384,7 @@ def enumerate_dist_s1_products(
                 ].reset_index(drop=True)
 
                 # finalize products
-                if not df_rtc_product.empty:  # and (not df_rtc_product[df_rtc_product.input_category == 'pre'].empty):
-                    # print(df_rtc_product[df_rtc_product.input_category == 'post'].acq_dt.min())
-                    # if (
-                    #     df_rtc_product[df_rtc_product.input_category == 'post'].acq_dt.min()
-                    #     - pd.Timestamp('2025-04-11', tz='UTC')
-                    # ).days <= 1:
-                    #    breakpoint()
+                if not df_rtc_product.empty:
                     products.append(df_rtc_product)
                     product_id += 1
     if products:
