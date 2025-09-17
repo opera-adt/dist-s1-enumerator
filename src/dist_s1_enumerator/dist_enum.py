@@ -218,7 +218,7 @@ def enumerate_dist_s1_products(
     max_pre_imgs_per_burst: int = (5, 5, 5),
     min_pre_imgs_per_burst: int = 1,
     tqdm_enabled: bool = True,
-    delta_lookback_days: int = 0,
+    delta_lookback_days: int = 365,
     delta_window_days: int = 365,
 ) -> gpd.GeoDataFrame:
     """
@@ -254,7 +254,7 @@ def enumerate_dist_s1_products(
     tqdm_enabled : bool, optional
         Whether to enable tqdm progress bars, by default True.
     delta_lookback_days : int, optional
-        When to set the most recent pre-image date. Default is 0.
+        When to set the most recent pre-image date. Default is 365.
         If lookback strategy is 'multi_window', this means the maximum number of days to search for pre-images on each
         anniversary date where `post_date - n * lookback_days` are the anniversary dates for n = 1,....
         If lookback strategy is 'immediate_lookback', this must be set to 0.
@@ -332,7 +332,7 @@ def enumerate_dist_s1_products(
                     # Loop over the different lookback days
                     df_rtc_pre_list = []
                     zipped_data = list(zip(params.delta_lookback_days, params.max_pre_imgs_per_burst))
-                    for delta_lookback_day, max_pre_img_per_burst in zipped_data:
+                    for delta_lookback_day, max_pre_img_per_burst_param in zipped_data:
                         delta_lookback_timedelta = pd.Timedelta(delta_lookback_day, unit='D')
                         delta_window_timedelta = pd.Timedelta(params.delta_window_days, unit='D')
                         window_start = post_date - delta_lookback_timedelta - delta_window_timedelta
@@ -354,7 +354,7 @@ def enumerate_dist_s1_products(
                         df_rtc_pre = df_rtc_pre.sort_values(by='acq_dt', ascending=True).reset_index(drop=True)
                         # Assume the data is sorted by acquisition date
                         df_rtc_pre = (
-                            df_rtc_pre.groupby('jpl_burst_id').tail(max_pre_img_per_burst).reset_index(drop=True)
+                            df_rtc_pre.groupby('jpl_burst_id').tail(max_pre_img_per_burst_param).reset_index(drop=True)
                         )
 
                         if df_rtc_pre.empty:
@@ -367,7 +367,6 @@ def enumerate_dist_s1_products(
                     df_rtc_pre_final = (
                         pd.concat(df_rtc_pre_list, ignore_index=True) if df_rtc_pre_list else pd.DataFrame()
                     )
-                    # product and provenance
                     df_rtc_product = pd.concat([df_rtc_pre_final, df_rtc_post]).reset_index(drop=True)
                     df_rtc_product['product_id'] = product_id
 
