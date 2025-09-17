@@ -33,7 +33,7 @@ def enumerate_dist_s1_workflow_inputs(
     lookback_strategy: str = 'multi_window',
     max_pre_imgs_per_burst: int | list[int] | tuple[int, ...] = (5, 5, 5),
     min_pre_imgs_per_burst: int = 1,
-    delta_lookback_days: int | list[int] | tuple[int, ...] = 0,
+    delta_lookback_days: int | list[int] | tuple[int, ...] = 365,
     delta_window_days: int = 365,
     df_ts: gpd.GeoDataFrame | None = None,
 ) -> list[dict]:
