@@ -10,6 +10,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 * Defaults for `lookback_delta_days` from 0 to 365 in enumeration of multiple products. Leading to submission of jobs that had no baseline (see Issue: https://github.com/opera-adt/dist-s1-enumerator/issues/44)
+* Renamed variables for easier tracking in `enumerat_dist_s1_products`.
 
 ## [1.0.2] - 2025-09-09
 

@@ -332,7 +332,7 @@ def enumerate_dist_s1_products(
                     # Loop over the different lookback days
                     df_rtc_pre_list = []
                     zipped_data = list(zip(params.delta_lookback_days, params.max_pre_imgs_per_burst))
-                    for delta_lookback_day, max_pre_img_per_burst in zipped_data:
+                    for delta_lookback_day, max_pre_img_per_burst_param in zipped_data:
                         delta_lookback_timedelta = pd.Timedelta(delta_lookback_day, unit='D')
                         delta_window_timedelta = pd.Timedelta(params.delta_window_days, unit='D')
                         window_start = post_date - delta_lookback_timedelta - delta_window_timedelta
@@ -354,7 +354,7 @@ def enumerate_dist_s1_products(
                         df_rtc_pre = df_rtc_pre.sort_values(by='acq_dt', ascending=True).reset_index(drop=True)
                         # Assume the data is sorted by acquisition date
                         df_rtc_pre = (
-                            df_rtc_pre.groupby('jpl_burst_id').tail(max_pre_img_per_burst).reset_index(drop=True)
+                            df_rtc_pre.groupby('jpl_burst_id').tail(max_pre_img_per_burst_param).reset_index(drop=True)
                         )
 
                         if df_rtc_pre.empty:
