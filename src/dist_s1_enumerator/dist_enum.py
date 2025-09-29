@@ -117,6 +117,11 @@ def enumerate_one_dist_s1_product(
         max_variation_seconds=300,
         n_images_per_burst=1,
     )
+    polarizations = df_rtc_post.polarizations.unique().tolist()
+    if len(polarizations) > 1:
+        raise ValueError(
+            f'Mixed polarizations found for {mgrs_tile_id} and track {track_number}: {polarizations} for single pass.'
+        )
 
     if df_rtc_post.empty:
         raise ValueError(f'No RTC-S1 post-images found for track {track_number} in MGRS tile {mgrs_tile_id}.')
@@ -136,6 +141,7 @@ def enumerate_one_dist_s1_product(
             start_acq_dt=start_acq_dt,
             stop_acq_dt=stop_acq_dt,
             n_images_per_burst=max_pre_imgs_per_burst,
+            polarizations=polarizations,
         )
 
     elif lookback_strategy == 'multi_window':
@@ -161,6 +167,7 @@ def enumerate_one_dist_s1_product(
                 start_acq_dt=start_acq_dt,
                 stop_acq_dt=stop_acq_dt,
                 n_images_per_burst=max_pre_img_per_burst,
+                polarizations=polarizations,
             )
 
             if not df_rtc_pre.empty:
@@ -294,6 +301,12 @@ def enumerate_dist_s1_products(
                 # post
                 df_rtc_post = df_rtc_ts_tile_track[df_rtc_ts_tile_track.pass_id == pass_id].reset_index(drop=True)
                 df_rtc_post['input_category'] = 'post'
+                polarizations = df_rtc_post.polarizations.unique().tolist()
+                if len(polarizations) > 1:
+                    raise ValueError(
+                        f'Mixed polarizations found for {mgrs_tile_id} and track {track_number}: {polarizations} '
+                        ' for single post pass.'
+                    )
 
                 if lookback_strategy == 'immediate_lookback':
                     # pre-image accounting
@@ -310,7 +323,8 @@ def enumerate_dist_s1_products(
                     )
                     # Select images that are present in the post-image
                     ind_burst = df_rtc_ts_tile_track.jpl_burst_id.isin(df_rtc_post.jpl_burst_id)
-                    ind = ind_time & ind_burst
+                    ind_pol = df_rtc_ts_tile_track.polarizations == polarizations
+                    ind = ind_time & ind_burst & ind_pol
                     df_rtc_pre = df_rtc_ts_tile_track[ind].reset_index(drop=True)
                     df_rtc_pre['input_category'] = 'pre'
 
@@ -340,12 +354,13 @@ def enumerate_dist_s1_products(
 
                         # pre-image filtering
                         # Select pre-images temporally
+                        ind_pol = df_rtc_ts_tile_track.polarizations == polarizations
                         ind_time = (df_rtc_ts_tile_track.acq_dt < window_stop) & (
                             df_rtc_ts_tile_track.acq_dt >= window_start
                         )
                         # Select images that are present in the post-image
                         ind_burst = df_rtc_ts_tile_track.jpl_burst_id.isin(df_rtc_post.jpl_burst_id)
-                        ind = ind_time & ind_burst
+                        ind = ind_time & ind_burst & ind_pol
                         df_rtc_pre = df_rtc_ts_tile_track[ind].reset_index(drop=True)
                         df_rtc_pre['input_category'] = 'pre'
 
