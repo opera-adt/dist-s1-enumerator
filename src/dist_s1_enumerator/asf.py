@@ -144,7 +144,7 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     else:
         ind_pol = df_rtc['polarizations'].isin(['HH+HV', 'VV+VH', 'HH', 'HV', 'VV', 'VH'])
     if not ind_pol.any():
-        raise ValueError(f'No valid dual polarization images found for {burst_ids}.')
+        warn(f'No valid dual polarization images found for {burst_ids}.')
     # First get all the dual-polarizations images
     df_rtc = df_rtc[ind_pol].reset_index(drop=True)
 

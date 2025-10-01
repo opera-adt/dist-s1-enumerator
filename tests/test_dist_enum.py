@@ -264,7 +264,7 @@ def test_dist_enum_one_with_multi_window_with_multiple_polarizations_and_asf_daa
         track_number=171,
         post_date='2025-09-19',
         lookback_strategy='multi_window',
-        # Need to look back further for validat VV+VH data
+        # Need to look back further for valid VV+VH data
         delta_lookback_days=(1460, 1095, 730, 365),
         max_pre_imgs_per_burst=(3, 3, 3, 4),
     )
@@ -279,12 +279,14 @@ def test_dist_enum_one_with_multi_window_with_multiple_polarizations_and_asf_daa
 
     # Check baseline data
     # The post image is VV+VH
-    # Ref: https://search.asf.alaska.edu/#/?dataset=OPERA-S1&productTypes=RTC&operaBurstID=T171_365965_IW3
-    opera_ids = df_product.opera_id.unique().tolist()
-    opera_ids_trunc = ['_'.join(op_id.split('_')[:4]) for op_id in opera_ids]
+    # Ref: https://search.asf.alaska.edu/#/?dataset=OPERA-S1&productTypes=RTC&operaBurstID=T171_365965_IW3&zoom=3.000
+    # &center=-74.108,31.979
+    # &resultsLoaded=true&granule=OPERA_L2_RTC-S1_T171-365965-IW3_20250919T102329Z_20250919T145901Z_S1C_30_v1.0
+    opera_ids = df_sample_vvvh_burst.opera_id.unique().tolist()
+    opera_ids_trunc = ['_'.join(op_id.split('_')[:5]) for op_id in opera_ids]
     # another VV+VH image
-    assert 'OPERA_L2_RTC-S1_T171-365965-IW3_20250826T102328Z' in opera_ids_trunc
-    # a HH+HV image
+    assert 'OPERA_L2_RTC-S1_T171-365965-IW3_20200921T102347Z' in opera_ids_trunc
+    # a HH+HV image in the time series - there is only one image from 2024 so should be in if it weren't 2024
     assert 'OPERA_L2_RTC-S1_T171-365965-IW3_20240427T102443Z' not in opera_ids_trunc
 
 
@@ -331,3 +333,28 @@ def test_dist_enum_one_with_multi_window_with_asf_daac() -> None:
     assert sorted(df_product_pre['acq_date_for_mgrs_pass'].unique().tolist()) == sorted(pre_dates_expected)
 
     assert df_product_post['acq_date_for_mgrs_pass'].unique().tolist() == ['2025-06-19']
+
+
+@pytest.mark.integration
+def test_dist_enum_one_with_multi_window_with_asf_daac_single_polarization() -> None:
+    """
+    Test enumeration of 1 product with multi_window strategy with single polarization data in post-image set.
+
+    The dataframe should be empty!
+
+    https://search.asf.alaska.edu/#/?maxResults=250&zoom=4.562&center=144.313,-7.683
+    &polygon=POLYGON((-242.1832%205.9478,-231.2276%205.9478,-231.2276%2018.4899,-242.1832%2018.4899,-242.1832%205.9478))
+    &dataset=OPERA-S1&productTypes=RTC&start=2024-10-18T08:00:00Z
+    &end=2024-10-31T07:59:59Z&resultsLoaded=true
+    &granule=OPERA_L2_RTC-S1_T069-146165-IW2_20241029T100013Z_20241029T204425Z_S1A_30_v1.0
+    &flightDirs=Ascending
+    """
+    with pytest.raises(ValueError, match='No RTC-S1 post-images found for track 69 in MGRS tile 51QUU.'):
+        _ = enumerate_one_dist_s1_product(
+            '51QUU',
+            track_number=69,
+            post_date='2024-10-29',
+            lookback_strategy='multi_window',
+            delta_lookback_days=(730, 365),
+            max_pre_imgs_per_burst=(3, 4),
+        )
