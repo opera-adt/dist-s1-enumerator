@@ -14,7 +14,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * We now ensure that single polarization data is excluded from baselines and not used in the creation of the post-image set.
 
 ### Fixed
-* Bug in enumerating 1 product.
+* Bug in enumerating 1 product - we did not ensure spatial bursts were consistent between pre-/post-image sets.
 
 
 ## [1.0.3] - 2025-09-09
