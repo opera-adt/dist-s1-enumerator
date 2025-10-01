@@ -72,6 +72,7 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     start_acq_dt: str | datetime | None | pd.Timestamp = None,
     stop_acq_dt: str | datetime | None | pd.Timestamp = None,
     polarizations: str | None = None,
+    include_single_polarization: bool = False,
 ) -> gpd.GeoDataFrame:
     """Wrap/format the ASF search API for RTC-S1 metadata search. All searches go through this function.
 
@@ -138,8 +139,10 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     df_rtc['polarizations'] = df_rtc['polarizations'].map(format_polarization)
     if polarizations is not None:
         ind_pol = df_rtc['polarizations'] == polarizations
-    else:
+    elif not include_single_polarization:
         ind_pol = df_rtc['polarizations'].isin(['HH+HV', 'VV+VH'])
+    else:
+        ind_pol = df_rtc['polarizations'].isin(['HH+HV', 'VV+VH', 'HH', 'HV', 'VV', 'VH'])
     if not ind_pol.any():
         raise ValueError(f'No valid dual polarization images found for {burst_ids}.')
     # First get all the dual-polarizations images

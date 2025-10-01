@@ -159,7 +159,7 @@ def enumerate_one_dist_s1_product(
             latest_lookback = delta_lookback_day
             start_acq_dt = post_date_min - timedelta(days=latest_lookback)
             stop_acq_dt = post_date_min - timedelta(days=earliest_lookback)
-            df_rtc_pre = get_rtc_s1_metadata_from_acq_group(
+            df_rtc_pre_window = get_rtc_s1_metadata_from_acq_group(
                 [mgrs_tile_id],
                 track_numbers=track_numbers,
                 start_acq_dt=start_acq_dt,
@@ -169,12 +169,12 @@ def enumerate_one_dist_s1_product(
             )
             df_unique_keys = df_rtc_post[['jpl_burst_id', 'polarizations']].drop_duplicates()
 
-            df_rtc_pre = pd.merge(df_rtc_pre, df_unique_keys, on=['jpl_burst_id', 'polarizations'], how='inner')
+            df_rtc_pre_window = pd.merge(
+                df_rtc_pre_window, df_unique_keys, on=['jpl_burst_id', 'polarizations'], how='inner'
+            )
 
-            df_rtc_pre['input_category'] = 'pre'
-
-            if not df_rtc_pre.empty:
-                df_rtc_pre_list.append(df_rtc_pre)
+            if not df_rtc_pre_window.empty:
+                df_rtc_pre_list.append(df_rtc_pre_window)
 
         df_rtc_pre = pd.concat(df_rtc_pre_list, ignore_index=True) if df_rtc_pre_list else pd.DataFrame()
 
@@ -189,7 +189,7 @@ def enumerate_one_dist_s1_product(
         df_rtc_pre = df_rtc_pre[df_rtc_pre.jpl_burst_id.isin(burst_ids_with_min_pre_images)].reset_index(drop=True)
 
         post_burst_ids = df_rtc_post.jpl_burst_id.unique().tolist()
-        pre_burst_ids = df_rtc_post.jpl_burst_id.unique().tolist()
+        pre_burst_ids = df_rtc_pre.jpl_burst_id.unique().tolist()
 
         final_burst_ids = list(set(post_burst_ids) & set(pre_burst_ids))
         df_rtc_pre = df_rtc_pre[df_rtc_pre.jpl_burst_id.isin(final_burst_ids)].reset_index(drop=True)
