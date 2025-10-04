@@ -93,6 +93,7 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     start_acq_dt: str | datetime | None | pd.Timestamp = None,
     stop_acq_dt: str | datetime | None | pd.Timestamp = None,
     polarizations: str | None = None,
+    include_single_polarization: bool = False,
 ) -> gpd.GeoDataFrame:
     """Wrap/format the ASF search API for RTC-S1 metadata search. All searches go through this function.
 
@@ -159,34 +160,31 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     df_rtc['polarizations'] = df_rtc['polarizations'].map(format_polarization)
     if polarizations is not None:
         ind_pol = df_rtc['polarizations'] == polarizations
-    else:
+    elif not include_single_polarization:
         ind_pol = df_rtc['polarizations'].isin(['HH+HV', 'VV+VH'])
+    else:
+        ind_pol = df_rtc['polarizations'].isin(['HH+HV', 'VV+VH', 'HH', 'HV', 'VV', 'VH'])
     if not ind_pol.any():
-        raise ValueError(f'No valid dual polarization images found for {burst_ids}.')
+        warn(f'No valid dual polarization images found for {burst_ids}.')
     # First get all the dual-polarizations images
     df_rtc = df_rtc[ind_pol].reset_index(drop=True)
-    # Then check all the dual-polarizations are the same (either HH+HV or VV+VH)
-    # TODO: if there are mixtures, can DIST-S1 still be generated assuming they look the same?
-    polarizations_unique = df_rtc['polarizations'].unique().tolist()
-    if len(polarizations_unique) > 1:
-        raise ValueError(
-            f'Mixed dual polarizations found for {burst_ids}. That is, some images are HH+HV and others are VV+HV.'
-        )
-    else:
-        # Either HH+HV or VV+VH
-        copol, crosspol = polarizations_unique[0].split('+')
 
     def get_url_by_polarization(prod_urls: list[str], polarization_token: str) -> list[str]:
-        possible_urls = [url for url in prod_urls if f'_{polarization_token}.tif' == url[-7:]]
+        if polarization_token == 'copol':
+            polarizations_allowed = ['VV', 'HH']
+        elif polarization_token == 'crosspol':
+            polarizations_allowed = ['HV', 'VH']
+        else:
+            raise ValueError(f'Invalid polarization token: {polarization_token}. Must be one of: copol, crosspol.')
+        possible_urls = [url for pol in polarizations_allowed for url in prod_urls if f'_{pol}.tif' == url[-7:]]
         if len(possible_urls) == 0:
-            raise ValueError(f'No {polarization_token} urls found')
+            raise ValueError(f'No {polarizations_allowed} urls found')
         if len(possible_urls) > 1:
-            breakpoint()
-            raise ValueError(f'Multiple {polarization_token} urls found')
+            raise ValueError(f'Multiple {polarization_token} urls found: {", ".join(possible_urls)}')
         return possible_urls[0]
 
-    url_copol = df_rtc.all_urls.map(lambda urls_for_prod: get_url_by_polarization(urls_for_prod, copol))
-    url_crosspol = df_rtc.all_urls.map(lambda urls_for_prod: get_url_by_polarization(urls_for_prod, crosspol))
+    url_copol = df_rtc.all_urls.map(lambda urls_for_prod: get_url_by_polarization(urls_for_prod, 'copol'))
+    url_crosspol = df_rtc.all_urls.map(lambda urls_for_prod: get_url_by_polarization(urls_for_prod, 'crosspol'))
 
     df_rtc['url_copol'] = url_copol
     df_rtc['url_crosspol'] = url_crosspol
@@ -210,6 +208,7 @@ def get_rtc_s1_metadata_from_acq_group(
     start_acq_dt: datetime | str | None = None,
     stop_acq_dt: datetime | str | None = None,
     max_variation_seconds: float | None = None,
+    polarizations: str | None = None,
 ) -> gpd.GeoDataFrame:
     """
     Meant for acquiring a pre-image or post-image set from MGRS tiles for a given S1 pass.
@@ -264,6 +263,7 @@ def get_rtc_s1_metadata_from_acq_group(
         burst_ids,
         start_acq_dt=start_acq_dt,
         stop_acq_dt=stop_acq_dt,
+        polarizations=polarizations,
     )
     # Assumes that each group is ordered by date (earliest first and most recent last)
     columns = df_rtc.columns

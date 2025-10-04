@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2025-09-29
+
+### Added
+* Update time-series enumeration for multiple polarizations within an MGRS tile.
+   - We now ensure that for each MGRS tile, a single fixed spatial burst creates a baseline (set of pre-images) for a given RTC-S1 burst product. That is, if the recent data was VV+VH in a burst, then the baseline for that burst VV+VH. Multiple dual polarization (i.e. both VV+VH and HH+HV) data can be used within a single MGRS tile.
+* We now ensure that single polarization data is excluded from baselines and not used in the creation of the post-image set.
+
+### Fixed
+* Bug in enumerating 1 product - we did not ensure spatial bursts were consistent between pre-/post-image sets.
+
+
 ## [1.0.3] - 2025-09-09
 
 ### Fixed
