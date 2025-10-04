@@ -12,6 +12,27 @@ from dist_s1_enumerator.mgrs_burst_data import get_burst_ids_in_mgrs_tiles, get_
 from dist_s1_enumerator.tabular_models import reorder_columns, rtc_s1_resp_schema, rtc_s1_schema
 
 
+def convert_asf_url_to_cumulus(url: str) -> str:
+    asf_base = 'https://datapool.asf.alaska.edu/RTC/OPERA-S1/'
+    cumulus_base = 'https://cumulus.asf.earthdatacloud.nasa.gov/OPERA/OPERA_L2_RTC-S1/'
+
+    if not (url.startswith(cumulus_base) or url.startswith(asf_base)):
+        warn(f'URL {url} is not a valid ASF datapool or cumulus earthdatacloud URL.')
+        return url
+
+    if not url.startswith(asf_base):
+        return url
+
+    filename = url.split('/')[-1]
+    granule_pol_parts = filename.rsplit('_', 1)
+    if len(granule_pol_parts) != 2:
+        raise ValueError(f'Could not extract granule name from filename: {filename}')
+
+    granule_name = granule_pol_parts[0]
+    new_url = f'{cumulus_base}{granule_name}/{filename}'
+    return new_url
+
+
 def format_polarization(pol: list | str) -> str:
     if isinstance(pol, list):
         if ('VV' in pol) and len(pol) == 2:
@@ -167,6 +188,8 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
 
     df_rtc['url_copol'] = url_copol
     df_rtc['url_crosspol'] = url_crosspol
+    df_rtc['url_copol'] = df_rtc['url_copol'].map(convert_asf_url_to_cumulus)
+    df_rtc['url_crosspol'] = df_rtc['url_crosspol'].map(convert_asf_url_to_cumulus)
     df_rtc = df_rtc.drop(columns=['all_urls'])
 
     # Ensure the data is sorted by jpl_burst_id and acq_dt
