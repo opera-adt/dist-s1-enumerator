@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from dist_s1_enumerator.asf import append_pass_data, get_rtc_s1_ts_metadata_by_burst_ids
+from dist_s1_enumerator.asf import append_pass_data, convert_asf_url_to_cumulus, get_rtc_s1_ts_metadata_by_burst_ids
 from dist_s1_enumerator.rtc_s1_io import generate_rtc_s1_local_paths, localize_rtc_s1_ts
 
 
@@ -13,6 +13,7 @@ def test_generate_rtc_s1_dst_paths() -> None:
         'https://datapool.asf.alaska.edu/RTC/OPERA-S1/OPERA_L2_RTC-S1_T173-370321-IW3_20231030T134501Z_20240122T220756Z_S1A_30_v1.0_VH.tif',
         'https://datapool.asf.alaska.edu/RTC/OPERA-S1/OPERA_L2_RTC-S1_T173-370322-IW3_20231030T134503Z_20240122T220756Z_S1A_30_v1.0_VH.tif',
     ]
+    urls = [convert_asf_url_to_cumulus(url) for url in urls]
     track_tokens = ['64', '64', '173', '173']
     date_tokens = ['2024-08-18', '2024-08-18', '2023-10-30', '2023-10-30']
     mgrs_tokens = ['11SLT', '11SLT', '11SMT', '11SMT']
