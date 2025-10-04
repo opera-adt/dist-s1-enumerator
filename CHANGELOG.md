@@ -8,7 +8,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.0.5] - 2025-09-29
 
-## Fixed
+### Fixed
 * CMR metadata does not have correctly migrated urls from ASF datapool to ASF cumulus - see https://github.com/opera-adt/dist-s1/issues/158.
 
 
