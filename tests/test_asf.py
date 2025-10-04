@@ -1,6 +1,6 @@
 import pytest
 
-from dist_s1_enumerator.asf import append_pass_data, get_rtc_s1_ts_metadata_by_burst_ids
+from dist_s1_enumerator.asf import append_pass_data, convert_asf_url_to_cumulus, get_rtc_s1_ts_metadata_by_burst_ids
 
 
 @pytest.mark.integration
@@ -35,3 +35,24 @@ def test_appending_mgrs_tiles() -> None:
 
     df_rtc_formatted_no_rows = append_pass_data(df_rtc_resp, ['22NFF'])
     assert df_rtc_formatted_no_rows.empty
+
+
+@pytest.mark.parametrize('pol_token', ['VV', 'VH', 'HH', 'HV'])
+def test_convert_asf_url_to_cumulus_from_datapool(pol_token: str) -> None:
+    """Test converting ASF datapool URL to cumulus earthdatacloud URL."""
+    asf_url = f'https://datapool.asf.alaska.edu/RTC/OPERA-S1/OPERA_L2_RTC-S1_T001-000189-IW2_20211028T180924Z_20250703T015334Z_S1A_30_v1.0_{pol_token}.tif'
+    expected_cumulus_url = f'https://cumulus.asf.earthdatacloud.nasa.gov/OPERA/OPERA_L2_RTC-S1/OPERA_L2_RTC-S1_T001-000189-IW2_20211028T180924Z_20250703T015334Z_S1A_30_v1.0/OPERA_L2_RTC-S1_T001-000189-IW2_20211028T180924Z_20250703T015334Z_S1A_30_v1.0_{pol_token}.tif'
+
+    result = convert_asf_url_to_cumulus(asf_url)
+
+    assert result == expected_cumulus_url
+
+
+@pytest.mark.parametrize('pol_token', ['VV', 'VH', 'HH', 'HV'])
+def test_convert_asf_url_to_cumulus_already_cumulus(pol_token: str) -> None:
+    """Test that cumulus URLs are returned unchanged."""
+    cumulus_url = f'https://cumulus.asf.earthdatacloud.nasa.gov/OPERA/OPERA_L2_RTC-S1/OPERA_L2_RTC-S1_T001-000189-IW2_20211028T180924Z_20250703T015334Z_S1A_30_v1.0/OPERA_L2_RTC-S1_T001-000189-IW2_20211028T180924Z_20250703T015334Z_S1A_30_v1.0_{pol_token}.tif'
+
+    result = convert_asf_url_to_cumulus(cumulus_url)
+
+    assert result == cumulus_url
