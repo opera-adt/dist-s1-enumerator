@@ -165,16 +165,16 @@ def test_all_bursts_in_lut() -> None:
 
 def test_antimeridian_crossing() -> None:
     df_mgrs = get_mgrs_table()
+    df_burst = get_burst_table()
     antimeridian_0 = LineString(coordinates=((-180, 90), (-180, -90))).buffer(0.00000001)
     antimeridian_1 = LineString(coordinates=((180, 90), (180, -90))).buffer(0.00000001)
 
-    for antimeridian in [antimeridian_0, antimeridian_1]:
-        ind_anti = df_mgrs.geometry.intersects(antimeridian)
-        df_mgrs_antimerid = df_mgrs[ind_anti].reset_index(drop=True)
-
-        any_polygons = (df_mgrs_antimerid.geometry.map(lambda geo: isinstance(geo, Polygon))).sum()
-        assert any_polygons == 0
-
-        df_mgrs_antimerid_not = df_mgrs[~ind_anti].reset_index(drop=True)
-        any_multis = (df_mgrs_antimerid_not.geometry.map(lambda geo: isinstance(geo, MultiPolygon))).sum()
-        assert any_multis == 0
+    for df in [df_mgrs, df_burst]:
+        for antimeridian in [antimeridian_0, antimeridian_1]:
+            ind_anti = df.geometry.intersects(antimeridian)
+            df_antimerid = df[ind_anti].reset_index(drop=True)
+            any_polygons = (df_antimerid.geometry.map(lambda geo: isinstance(geo, Polygon))).sum()
+            assert any_polygons == 0
+            df_antimerid_not = df[~ind_anti].reset_index(drop=True)
+            any_multis = (df_antimerid_not.geometry.map(lambda geo: isinstance(geo, MultiPolygon))).sum()
+            assert any_multis == 0

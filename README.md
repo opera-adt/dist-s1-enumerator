@@ -108,7 +108,8 @@ The antimeridian (or dateline) is the line at the -180 longitude mark that globa
 The geometries of the bursts and the MGRS tiles in this package are all in `epsg:4326` (standard lon/lat). 
 The geometries are all between -180 and 180 so those geometries that cross the antimeridian/dateline are generally wrapped.
 For MGRS tiles, the statement that a geometry overlaps the antimeridian occurs if and only if the geometry is a Polygon.
-For the burst geometries, some geometries where only a small portion would be present along an opposite hemisphere, the geometries are truncated.
+The same is true for burst geometries.
+See `test_antimeridian_crossing` in [`tests/test_mgrs_burst_data.py`](tests/test_mgrs_burst_data.py).
 
 # Contributing
 
