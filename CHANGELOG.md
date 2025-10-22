@@ -11,7 +11,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 * Tests for MGRS tiles and burst geometries ensuring they overlap the antimeridian if and only if they are multipolygons.
 * Updated readme with information about these mgrs/burst geometries and the dateline.
-* Updated burst geometries using geopackage geometry from opera_adt/burst_db. See this issue: https://github.com/opera-adt/burst_db/issues/120 - some dateline geometries were cut off. The new geometries are larger and the table went from 24 MB to 37 MB.
+* Updated burst geometries using geopackage geometry from opera_adt/burst_db. See this issue: https://github.com/opera-adt/burst_db/issues/120 - some dateline geometries were cut off. The new geometries are larger and the table went from 24 MB to 37 MB. See this notebook: https://github.com/OPERA-Cal-Val/dist-s1-research/blob/dev/marshak/Zb_update_burst_table/Update%20Burst%20Geometries%20Using%20Geopackage.ipynb
 
 ## [1.0.5] - 2025-09-29
 
