@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2025-10-09
+
+### Added
+* Tests for MGRS tiles and burst geometries ensuring they overlap the antimeridian if and only if they are multipolygons.
+* Updated readme with information about these mgrs/burst geometries and the dateline.
+* Updated burst geometries using geopackage geometry from opera_adt/burst_db. See this issue: https://github.com/opera-adt/burst_db/issues/120 - some dateline geometries were cut off. The new geometries are larger and the table went from 24 MB to 37 MB.
+
 ## [1.0.5] - 2025-09-29
 
 ### Fixed

@@ -1,5 +1,5 @@
 import pytest
-from shapely.geometry import Point
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 
 from dist_s1_enumerator.exceptions import NoMGRSCoverage
 from dist_s1_enumerator.mgrs_burst_data import (
@@ -161,3 +161,20 @@ def test_all_bursts_in_lut() -> None:
     df_merged = df_bursts.merge(df_mgrs_lut, on='jpl_burst_id', indicator=True, how='left')
     burst_ids_not_in_lut = df_merged[df_merged['_merge'] == 'left_only'].jpl_burst_id.unique().tolist()
     assert len(burst_ids_not_in_lut) == 0
+
+
+def test_antimeridian_crossing() -> None:
+    df_mgrs = get_mgrs_table()
+    df_burst = get_burst_table()
+    antimeridian_0 = LineString(coordinates=((-180, 90), (-180, -90))).buffer(0.00000001)
+    antimeridian_1 = LineString(coordinates=((180, 90), (180, -90))).buffer(0.00000001)
+
+    for df in [df_mgrs, df_burst]:
+        for antimeridian in [antimeridian_0, antimeridian_1]:
+            ind_anti = df.geometry.intersects(antimeridian)
+            df_antimerid = df[ind_anti].reset_index(drop=True)
+            any_polygons = (df_antimerid.geometry.map(lambda geo: isinstance(geo, Polygon))).sum()
+            assert any_polygons == 0
+            df_antimerid_not = df[~ind_anti].reset_index(drop=True)
+            any_multis = (df_antimerid_not.geometry.map(lambda geo: isinstance(geo, MultiPolygon))).sum()
+            assert any_multis == 0
