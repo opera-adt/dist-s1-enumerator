@@ -123,7 +123,10 @@ def enumerate_one_dist_s1_product(
     if lookback_strategy == 'immediate_lookback':
         # Add 5 minutes buffer to ensure we don't include post-images in pre-image set.
         print('Searching for pre-images for immediate_lookback products')
-        print(f'Lookback days {params.delta_lookback_days} and window days {params.delta_window_days}')
+        print(
+            f'Lookback days {params.delta_lookback_days} and window days {params.delta_window_days} '
+            f'with max pre-images per burst {params.max_pre_imgs_per_burst}'
+        )
         post_date_min = df_rtc_post.acq_dt.min() - pd.Timedelta(seconds=300)
         earliest_lookback = params.delta_window_days + params.delta_lookback_days
         latest_lookback = params.delta_lookback_days
@@ -146,7 +149,10 @@ def enumerate_one_dist_s1_product(
         df_rtc_pre_list = []
         zipped_data = list(zip(params.delta_lookback_days, params.max_pre_imgs_per_burst))
         print('Searching for pre-images for multi_window baseline')
-        print(f'Lookback days {params.delta_lookback_days} and window days {params.delta_window_days}')
+        print(
+            f'Lookback days {params.delta_lookback_days} and window days {params.delta_window_days} '
+            f'with max pre-images per burst {params.max_pre_imgs_per_burst}'
+        )
         for delta_lookback_day, max_pre_img_per_burst in tqdm(
             zipped_data,
             desc='Windows',
