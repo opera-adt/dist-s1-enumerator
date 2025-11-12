@@ -10,6 +10,7 @@ This is a Python library for enumerating OPERA RTC-S1 inputs necessary for the c
 The library can enumerate inputs for the creation of a single DIST-S1 product or a time-series of DIST-S1 products over a large area spanning multiple passes.
 The DIST-S1 measures disturbance comparing a baseline of RTC-S1 images (pre-images) to a current set of acquisition images (post-images).
 This library also provides functionality for downloading the OPERA RTC-S1 data from ASF DAAC.
+We use "enumeration" to describe the "curation of required DIST-S1 inputs."
 
 
 ## Installation/Setup
@@ -90,6 +91,23 @@ In theory, we could specify the exact time of acquisition, but we have elected t
 It is also important to note that we are assuming the selection of pre-images (once a post-image set is selected) is fixed.
 Indeed, varying a baseline of pre-images by which to measure disturbance will alter the final DIST-S1 product.
 Indeed, we can modify strategies of pre-image selection using this library (e.g. `multi_window` vs. `immediate_lookback`), but for DIST-S1 generation which has a fixed strategy with associated parameters, the above 3 fields uniquely identify a DIST-S1 product.
+
+# About the Data Tables in this Library
+
+One of the purposes of this data is to provide easy access via standard lookups to a variety of tables associated with enumerating DIST-S1 products.
+There are three data tables:
+
+1. [Burst Geometry Table](src/dist_s1_enumerator/data/jpl_burst_geo.parquet) - the JPL spatially fixed bursts within 2 km of land as identified via the UMD Ocean Mask ([link](https://console.cloud.google.com/storage/browser/earthenginepartners-hansen/OceanMask;tab=objects?prefix=&forceOnObjectsSortingFiltering=false))
+2. [MGRS Table](src/dist_s1_enumerator/data/mgrs.parquet) - the MGRS tiles that are (1) used in DIST-HLS processing (see this [list](tests/data/dist_hls_tiles.txt)) and (2) have overlapping bursts from 1.
+3. [MGRS/Burst Lookup Table](src/dist_s1_enumerator/data/mgrs_burst_lookup_table.parquet) - this is effectively a spatial join of burst geometries and MGRS tiles to allow us to get all relevant bursts from a pass. A pass is defined to be all the data collected over an MGRS tile from Sentinel-1, i.e. all the RTC-S1 products coming from the Sentinel-1.
+
+How these tables were created be found in this [notebook](https://github.com/OPERA-Cal-Val/dist-s1-research/blob/dev/marshak/Zc_check_bursts_without_mgrs_tile/1__Lookup%20Tables%20for%20MGRS%20and%20Bursts.ipynb).
+It's worth noting there is some care taken to do the accounting of track numbers within a Sentinel-1 acquisition to properly identify a single data take.
+Sentinel-1 track numbers of products increment near the equator even though they are still within the same pass. 
+Thus, we include the column `acq_group_id_within_mgrs_tile` to identify different data takes within a single MGRS tile.
+We also filter out burst/mgrs pairs if the a Sentinel-1 pass that is smaller than 250 km^2 within the intersection. The MGRS tiles are 3660 x 3660 pixels at 30 meter resolution and so have total area of 12,056 km^2. Thus, this minimum overlap means if a data acquisition over an MGRS tile has less than about 2 percent of total possible data, then we do not need to create a DIST-S1 product for it. Because there is at least 10 km of overlap$^{*}$ between adjacent tiles (more at higher latitudes), this minimum coverage requirement means such excluded products will likely be better represented in adjacent MGRS tiles.
+
+${}^*$Although there is [documentation](https://hls.gsfc.nasa.gov/products-description/tiling-system/) saying there is 4.9 overlap between tiles, looking at the MGRS tile table above, we see that overlap is closer to 10 km, or 9% of overlap of the area (since the MGRS tiles are about 109 km x 109 km).
 
 # Testing
 
