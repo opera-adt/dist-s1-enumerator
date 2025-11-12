@@ -5,34 +5,12 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point, Polygon
 
+from dist_s1_enumerator.constants import BLACKLISTED_MGRS_TILE_IDS
 from dist_s1_enumerator.exceptions import NoMGRSCoverage
 from dist_s1_enumerator.tabular_models import burst_mgrs_lut_schema, burst_schema, mgrs_tile_schema, reorder_columns
 
 
 DATA_DIR = Path(__file__).resolve().parent / 'data'
-
-# CONSTANTS FOR REFERENCE
-MAX_BURSTS_IN_MGRS_TILE = 450
-MAX_MGRS_TILES_INTERSECTING_BURST = 8
-
-# Tiles that are in DIST-HLS but not in DIST-S1
-# due to coverage
-BLACKLISTED_MGRS_TILE_IDS = [
-    '01XDE',
-    '11RPH',
-    '23EMN',
-    '23EMP',
-    '23ENN',
-    '26VMN',
-    '26VPM',
-    '26VPN',
-    '27VUG',
-    '27VUH',
-    '27VWH',
-    '60EWU',
-    '60EWV',
-    '60XWK',
-]
 
 
 def get_mgrs_burst_lut_path() -> Path:
