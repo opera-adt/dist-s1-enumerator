@@ -105,9 +105,9 @@ How these tables were created be found in this [notebook](https://github.com/OPE
 It's worth noting there is some care taken to do the accounting of track numbers within a Sentinel-1 acquisition to properly identify a single data take.
 Sentinel-1 track numbers of products increment near the equator even though they are still within the same pass. 
 Thus, we include the column `acq_group_id_within_mgrs_tile` to identify different data takes within a single MGRS tile.
-We also filter out burst/mgrs pairs if the a Sentinel-1 pass that is smaller than 250 km^2 within the intersection. The MGRS tiles are 3660 x 3660 pixels at 30 meter resolution and so have total area of 12,056 km^2. Thus, this minimum overlap means if a data acquisition over an MGRS tile has less than about 2 percent of total possible data, then we do not need to create a DIST-S1 product for it. Because there is at least 10 km of overlap$^{*}$ between adjacent tiles (more at higher latitudes), this minimum coverage requirement means such excluded products will likely be better represented in adjacent MGRS tiles.
+We also filter out burst/mgrs pairs if the a Sentinel-1 pass that is smaller than 250 km^2 within the intersection. The MGRS tiles are 3660 x 3660 pixels at 30 meter resolution and so have total area of 12,056 km^2. Thus, this minimum overlap means if a data acquisition over an MGRS tile has less than about 2 percent of total possible data, then we do not need to create a DIST-S1 product for it. Because there is at least 10 km of overlap<sup>*</sup> between adjacent tiles (more at higher latitudes), this minimum coverage requirement means such excluded products will likely be better represented in adjacent MGRS tiles.
 
-${}^*$Although there is [documentation](https://hls.gsfc.nasa.gov/products-description/tiling-system/) saying there is 4.9 overlap between tiles, looking at the MGRS tile table above, we see that overlap is closer to 10 km, or 9% of overlap of the area (since the MGRS tiles are about 109 km x 109 km).
+<sup>*</sup>Although there is [documentation](https://hls.gsfc.nasa.gov/products-description/tiling-system/) saying there is 4.9 overlap between tiles, looking at the MGRS tile table above, we see that overlap is closer to 10 km, or 9% of overlap of the area (since the MGRS tiles are about 109 km x 109 km).
 
 # Testing
 
