@@ -1,10 +1,12 @@
+import pathlib
+from pathlib import Path
+
 import pytest
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 
+from dist_s1_enumerator.constants import BLACKLISTED_MGRS_TILE_IDS, MAX_BURSTS_IN_MGRS_TILE
 from dist_s1_enumerator.exceptions import NoMGRSCoverage
 from dist_s1_enumerator.mgrs_burst_data import (
-    BLACKLISTED_MGRS_TILE_IDS,
-    MAX_BURSTS_IN_MGRS_TILE,
     get_burst_ids_in_mgrs_tiles,
     get_burst_table,
     get_lut_by_mgrs_tile_ids,
@@ -110,7 +112,6 @@ def test_get_burst_ids_in_mgrs_tile_explicit_track_number() -> None:
         'T001-000700-IW2',
         'T001-000701-IW1',
         'T001-000702-IW1',
-        'T001-000703-IW1',
     ]
     assert burst_ids_out == burst_ids_expected
 
@@ -145,13 +146,16 @@ def test_mgrs_tile_track_mismatch() -> None:
         _ = get_burst_ids_in_mgrs_tiles('15RXN', track_numbers=[1])
 
 
-def test_blacklist_mgrs_tiles() -> None:
+def test_blacklist_mgrs_tiles(test_dir: Path) -> None:
+    hls_txt_file = test_dir / 'data' / 'dist_hls_tiles.txt'
+    with pathlib.Path(hls_txt_file).open('r') as f:
+        dist_hls_tiles = f.read().splitlines()
+    dist_hls_tiles = [tile.strip() for tile in dist_hls_tiles]
     df_mgrs_all = get_mgrs_table()
-    df_mgrs_lut = get_mgrs_burst_lut()
+    dist_s1_tiles = df_mgrs_all.mgrs_tile_id.tolist()
 
-    df_merged = df_mgrs_all.merge(df_mgrs_lut, on='mgrs_tile_id', indicator=True, how='left')
-    MGRS_TILES_NOT_IN_DIST_S1 = df_merged[df_merged['_merge'] == 'left_only'].mgrs_tile_id.unique().tolist()
-    assert set(BLACKLISTED_MGRS_TILE_IDS) == set(MGRS_TILES_NOT_IN_DIST_S1)
+    expected_blacklist_tiles = [mid for mid in dist_hls_tiles if mid not in dist_s1_tiles]
+    assert set(BLACKLISTED_MGRS_TILE_IDS) == set(expected_blacklist_tiles)
 
 
 def test_all_bursts_in_lut() -> None:

@@ -9,6 +9,7 @@ from pandera.pandas import check_input
 from pytest_mock import MockerFixture
 
 from dist_s1_enumerator.dist_enum import enumerate_dist_s1_products, enumerate_one_dist_s1_product
+from dist_s1_enumerator.mgrs_burst_data import get_burst_ids_in_mgrs_tiles
 from dist_s1_enumerator.param_models import LookbackStrategyParams
 from dist_s1_enumerator.tabular_models import rtc_s1_resp_schema, rtc_s1_schema
 
@@ -84,6 +85,11 @@ def test_dist_enum_default_strategies(
         raise TypeError('mgrs_tile_ids must be a list')
 
     df_rtc_s1_ts = read_rtc_s1_ts(mgrs_tile_ids, track_numbers=track_numbers)
+
+    # Added to ensure burst ids from new data are correctly filtered - we created sample data <v1.0.8
+    # TODO: if we regenerate the data, we can remove these two lines
+    burst_ids_in_dist_s1 = get_burst_ids_in_mgrs_tiles(mgrs_tile_ids, track_numbers=track_numbers)
+    df_rtc_s1_ts = df_rtc_s1_ts[df_rtc_s1_ts.jpl_burst_id.isin(burst_ids_in_dist_s1)].reset_index(drop=True)
 
     params = LookbackStrategyParams(
         lookback_strategy=lookback_strategy,
@@ -305,12 +311,12 @@ def test_dist_enum_one_with_multi_window_with_asf_daac() -> None:
         'T144-308025-IW1',
         'T144-308026-IW1',
         'T144-308027-IW1',
-        'T144-308028-IW1',
         'T144-308029-IW1',
         'T144-308030-IW1',
         'T144-308031-IW1',
     ]
-    assert sorted(df_product['jpl_burst_id'].unique().tolist()) == sorted(burst_ids_expected)
+    actual_burst_ids = sorted(df_product['jpl_burst_id'].unique().tolist())
+    assert actual_burst_ids == burst_ids_expected
 
     post_ind = df_product.input_category == 'post'
     df_product_post = df_product[post_ind].reset_index(drop=True)
