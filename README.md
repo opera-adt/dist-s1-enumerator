@@ -44,6 +44,8 @@ Same as above replacing `pip install dist-s1-enumerator` with `pip install -e .`
 ### For triggering DIST-S1 Workflows
 
 ```
+from dist_s1_enumerator import enumerate_dist_s1_workflow_inputs
+
 workflow_inputs = enumerate_dist_s1_workflow_inputs(mgrs_tile_ids='19HBD',
                                                     track_numbers=None,
                                                     start_acq_dt='2023-11-01',
