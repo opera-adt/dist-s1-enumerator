@@ -116,14 +116,16 @@ Yields:
 </details>
 Each dictionary uniquely determines a DIST-S1 product.
 In fact, the list above is a complete account of all DIST-S1 products over this MGRS tile and during this time period.
-We can use any of the dictionaries to trigger the DIST-S1 workflow e.g. using the last dictionary in the list above:
+We can use any of the dictionaries in the list to trigger the DIST-S1 workflow e.g. using the last dictionary in the list above:
+
 ```
 dist-s1 run \
     --mgrs_tile_id '19HBD' \
     --post_date '2024-03-28' \
     --track_number 91
 ```
-See the [dist-s1](https://github.com/opera-adt/dist-s1) repository for more details on its usage.
+
+See the [dist-s1](https://github.com/opera-adt/dist-s1) repository for more details on the `dist-s1` usage and workflow.
 
 ### Obtaining RTC-S1 Inputs for a given DIST-S1 product
 
