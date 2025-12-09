@@ -49,18 +49,108 @@ from dist_s1_enumerator import enumerate_dist_s1_workflow_inputs
 workflow_inputs = enumerate_dist_s1_workflow_inputs(mgrs_tile_ids='19HBD',
                                                     track_numbers=None,
                                                     start_acq_dt='2023-11-01',
-                                                    stop_acq_dt='2024-04-01',
-                                                    lookback_strategy='multi_window',
-                                                    delta_lookback_days=365,
-                                                    max_pre_imgs_per_burst=5)
+                                                    stop_acq_dt='2024-04-01')
 ```
 Yields:
-```
-[{'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-11-05', 'track_number': 91},
+<details>
+  <summary>Output</summary>
+
+```[{'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-11-05', 'track_number': 91},
  {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-11-10', 'track_number': 156},
- {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-11-12', 'track_number': 18}...]
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-11-12', 'track_number': 18},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-11-17', 'track_number': 91},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-11-22', 'track_number': 156},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-11-24', 'track_number': 18},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-12-04', 'track_number': 156},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-12-06', 'track_number': 18},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-12-11', 'track_number': 91},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-12-16', 'track_number': 156},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-12-18', 'track_number': 18},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-12-23', 'track_number': 91},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-12-28', 'track_number': 156},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2023-12-30', 'track_number': 18},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-01-04', 'track_number': 91},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-01-09', 'track_number': 156},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-01-11', 'track_number': 18},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-01-16', 'track_number': 91},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-01-21', 'track_number': 156},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-01-23', 'track_number': 18},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-01-28', 'track_number': 91},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-02-02', 'track_number': 156},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-02-04', 'track_number': 18},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-02-09', 'track_number': 91},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-02-14', 'track_number': 156},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-02-16', 'track_number': 18},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-02-21', 'track_number': 91},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-02-26', 'track_number': 156},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-02-28', 'track_number': 18},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-03-04', 'track_number': 91},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-03-09', 'track_number': 156},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-03-11', 'track_number': 18},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-03-16', 'track_number': 91},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-03-21', 'track_number': 156},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-03-23', 'track_number': 18},
+ {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-03-28', 'track_number': 91}]
 ```
-Where these fields uniquely determine a DIST-S1 product and can be used to trigger the workflow.
+</details>
+
+Where these fields uniquely determine a DIST-S1 product in space and time. Each dictionary can be used to trigger the DIST-S1 workflow. To get RTC-S1 inputs necessary that are used in the workflow, use:
+```
+from dist_s1_enumerator import enumerate_one_dist_s1_product
+
+df_product_t91 = enumerate_one_dist_s1_product('20TLP', track_number=[91], post_date='2025-09-25')
+df_product_t91.head()
+```
+<details>
+  <summary>Output</summary>
+
+```opera_id     jpl_burst_id  \
+0  OPERA_L2_RTC-S1_T091-193570-IW3_20240807T22192...  T091-193570-IW3   
+1  OPERA_L2_RTC-S1_T091-193570-IW3_20240819T22192...  T091-193570-IW3   
+2  OPERA_L2_RTC-S1_T091-193570-IW3_20240831T22192...  T091-193570-IW3   
+3  OPERA_L2_RTC-S1_T091-193570-IW3_20240912T22192...  T091-193570-IW3   
+4  OPERA_L2_RTC-S1_T091-193570-IW3_20240924T22192...  T091-193570-IW3   
+
+                     acq_dt acq_date_for_mgrs_pass polarizations  \
+0 2024-08-07 22:19:28+00:00             2024-08-07         VV+VH   
+1 2024-08-19 22:19:28+00:00             2024-08-19         VV+VH   
+2 2024-08-31 22:19:28+00:00             2024-08-31         VV+VH   
+3 2024-09-12 22:19:29+00:00             2024-09-12         VV+VH   
+4 2024-09-24 22:19:29+00:00             2024-09-24         VV+VH   
+
+   track_number  pass_id                                       url_crosspol  \
+0            91      645  https://cumulus.asf.earthdatacloud.nasa.gov/OP...   
+1            91      647  https://cumulus.asf.earthdatacloud.nasa.gov/OP...   
+2            91      649  https://cumulus.asf.earthdatacloud.nasa.gov/OP...   
+3            91      651  https://cumulus.asf.earthdatacloud.nasa.gov/OP...   
+4            91      653  https://cumulus.asf.earthdatacloud.nasa.gov/OP...   
+
+                                           url_copol  \
+0  https://cumulus.asf.earthdatacloud.nasa.gov/OP...   
+1  https://cumulus.asf.earthdatacloud.nasa.gov/OP...   
+2  https://cumulus.asf.earthdatacloud.nasa.gov/OP...   
+3  https://cumulus.asf.earthdatacloud.nasa.gov/OP...   
+4  https://cumulus.asf.earthdatacloud.nasa.gov/OP...   
+
+                                            geometry mgrs_tile_id  \
+0  POLYGON ((-65.58616 43.67944, -65.07523 43.740...        20TLP   
+1  POLYGON ((-65.58746 43.68056, -65.07652 43.741...        20TLP   
+2  POLYGON ((-65.58803 43.68023, -65.07706 43.741...        20TLP   
+3  POLYGON ((-65.58995 43.68007, -65.07902 43.740...        20TLP   
+4  POLYGON ((-65.5893 43.67982, -65.07838 43.7406...        20TLP   
+
+   acq_group_id_within_mgrs_tile track_token input_category  
+0                              2          91            pre  
+1                              2          91            pre  
+2                              2          91            pre  
+3                              2          91            pre  
+4                              2          91            pre  
+```
+</details>
+
+The output is a pandas dataframe so can easily using the pandas API e.g. 
+
+```df_product_t91.to_csv("df_product.csv", index=False)```
 
 ### For collecting DIST-S1 inputs
 
