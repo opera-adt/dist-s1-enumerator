@@ -41,7 +41,7 @@ Same as above replacing `pip install dist-s1-enumerator` with `pip install -e .`
 
 ## Usage
 
-### For triggering DIST-S1 Workflows
+### Triggering DIST-S1 Workflows
 
 ```
 from dist_s1_enumerator import enumerate_dist_s1_workflow_inputs
@@ -94,7 +94,11 @@ Yields:
 ```
 </details>
 
-Where these fields uniquely determine a DIST-S1 product in space and time. Each dictionary can be used to trigger the DIST-S1 workflow. To get RTC-S1 inputs necessary that are used in the workflow, use:
+Where these fields uniquely determine a DIST-S1 product in space and time. Each dictionary can be used to trigger the DIST-S1 workflow. 
+
+# Obtaining Inputs for the DIST-S1 Workflow
+
+To get RTC-S1 inputs necessary that are used in the workflow, use:
 ```
 from dist_s1_enumerator import enumerate_one_dist_s1_product
 
@@ -152,11 +156,9 @@ The output is a pandas dataframe so can easily using the pandas API e.g.
 
 ```df_product_t91.to_csv("df_product.csv", index=False)```
 
-### For collecting DIST-S1 inputs
+### Notebooks for collecting DIST-S1 inputs
 
-The above example tells us the recent acquisition date that disturbance is made relative to (`post_acq_date`) over an MGRS tile (`mgrs_tile_id`).
-However, there are many OPERA RTC-S1 products used on that given date and to establish a baseline.
-To enumerate all the necessary inputs (which can be further localized with this library), see the [Jupyter notebooks](./notebooks).
+See the [Jupyter notebooks](./notebooks).
 
 - [Enumerating inputs for a single DIST-S1 product](./notebooks/A__Staging_Inputs_for_One_MGRS_Tile.ipynb)
 - [Enumerating inputs for a time-series of DIST-S1 products](./notebooks/B__Enumerate_MGRS_tile.ipynb)
