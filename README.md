@@ -176,7 +176,7 @@ The output is a pandas dataframe that can be serialized using the pandas API:
 df_product_t91.to_csv("df_product.csv", index=False)
 ```
 
-For more details see [Jupyter notebooks](./notebooks).
+For more details see the [Jupyter notebooks](./notebooks):
 
 - [Enumerating inputs for a single DIST-S1 product](./notebooks/A__Staging_Inputs_for_One_MGRS_Tile.ipynb)
 - [Enumerating inputs for a time-series of DIST-S1 products](./notebooks/B__Enumerate_MGRS_tile.ipynb)
