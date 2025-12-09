@@ -41,18 +41,17 @@ Same as above replacing `pip install dist-s1-enumerator` with `pip install -e .`
 
 ## Usage
 
-### Triggering DIST-S1 Workflows
+### Triggering the DIST-S1 Workflow
 
-The DIST-S1 product is uniquely identified by space and time via:
+The DIST-S1 product is uniquely identified in space and time by:
 
-1. MGRS Tile ID
-2. Track Number of Sentinel-1
-3. Post-image acquisition time (within 1 day)
+1. an MGRS Tile ID
+2. a Track Number of Sentinel-1
+3. the post-image acquisition time (within 1 day)
 
-Identifying all such products over a time (acceptable times of the post-image) and space (MGRS tiles) effectively identifies all possible products.
-Each set of inputs that can be provided are said to "trigger" the workflow.
-Below is an example:
-
+These pieces of information are required to generate any given DIST-S1 product.
+Identifying all such products over time (acceptable times of the post-image) and space (MGRS tiles) allows us to enumerate all DIST-S1 products.
+We can enumerate DIST-S1 products with this library as follows:
 ```
 from dist_s1_enumerator import enumerate_dist_s1_workflow_inputs
 
@@ -103,9 +102,9 @@ Yields:
  {'mgrs_tile_id': '19HBD', 'post_acq_date': '2024-03-28', 'track_number': 91}]
 ```
 </details>
-
-Each dictionary uniquely determine a DIST-S1 product in space and time.
-For example, using the last entry, we can run the following:
+Each dictionary uniquely determines a DIST-S1 product.
+In fact, the list above is a complete account of all DIST-S1 products over this MGRS tile and during this time period.
+We can use any of the dictionaries to trigger the DIST-S1 workflow e.g. using the last dictionary in the list above:
 ```
 dist-s1 run \
     --mgrs_tile_id '19HBD' \
@@ -114,11 +113,11 @@ dist-s1 run \
 ```
 See the [dist-s1](https://github.com/opera-adt/dist-s1) repository for more details.
 
-### Obtaining Inputs for the DIST-S1 Workflow
+### Obtaining RTC-S1 Inputs for a given DIST-S1 product
 
-In addition to figuring out the relevant triggers for the DIST-S1 workflow, we can query NASA's Common Metadata Repository to identify all RTC-S1 products necessary for the DIST-S1  that are used in the workflow.
-This is done above under the hood, except we only save information required to trigger the actual DIST-S1 worklow.
-Here is an example to get the RTC-S1 input products for a given set of workflow inputs:
+In addition to figuring out the relevant information to trigger the DIST-S1 workflow, we can query NASA's Common Metadata Repository to identify all RTC-S1 products required to create this DIST-S1 product that are used in the workflow.
+This is done above, except we only save information required to trigger the actual DIST-S1 worklow.
+Here is an example to get the full account of the necessary RTC-S1 input products for a given set of DIST-S1 workflow inputs:
 ```
 from dist_s1_enumerator import enumerate_one_dist_s1_product
 
@@ -171,13 +170,10 @@ df_product_t91.head()
 4                              2          91            pre  
 ```
 </details>
-
-The output is a pandas dataframe so can easily using the pandas API e.g. 
-
+The output is a pandas dataframe that can be serialized using the pandas API:
 ```
 df_product_t91.to_csv("df_product.csv", index=False)
 ```
-
 For more details see [Jupyter notebooks](./notebooks).
 
 - [Enumerating inputs for a single DIST-S1 product](./notebooks/A__Staging_Inputs_for_One_MGRS_Tile.ipynb)
