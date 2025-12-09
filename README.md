@@ -41,9 +41,21 @@ Same as above replacing `pip install dist-s1-enumerator` with `pip install -e .`
 
 ## Usage
 
+### Motivation
+
+We want to generate a DIST-S1 product using [dist-s1](https://github.com/opera-adt/dist-s1). We successfully installed the software, but don't know how to call the CLI:
+
+```
+dist-s1 run \
+    --mgrs_tile_id '19HBD' \
+    --post_date '2024-03-28' \
+    --track_number 91
+```
+Where do these inputs come from? Can we get them without looking up RTC-S1 products manually? Of course! That's the point of this library.
+
 ### Triggering the DIST-S1 Workflow
 
-The DIST-S1 product is uniquely identified in space and time by:
+Each DIST-S1 product is uniquely identified in space and time by:
 
 1. an MGRS Tile ID
 2. a Track Number of Sentinel-1
@@ -108,10 +120,10 @@ We can use any of the dictionaries to trigger the DIST-S1 workflow e.g. using th
 ```
 dist-s1 run \
     --mgrs_tile_id '19HBD' \
-    --post_date '024-03-28' \
+    --post_date '2024-03-28' \
     --track_number 91
 ```
-See the [dist-s1](https://github.com/opera-adt/dist-s1) repository for more details.
+See the [dist-s1](https://github.com/opera-adt/dist-s1) repository for more details on its usage.
 
 ### Obtaining RTC-S1 Inputs for a given DIST-S1 product
 
@@ -183,26 +195,19 @@ For more details see the [Jupyter notebooks](./notebooks):
 
 ### Identifiers for DIST-S1 products
 
-Of course, knowing all the OPERA RTC-S1 products (pre-images and post-images) necessary for a DIST-S1 product uniquely identifies the products.
-However, all these inputs can be amount to upwards of 100 products for each DIST-S1 product and is not human parsable.
-Thus, it is helpful to know alterate ways to identify and trigger the DIST-S1 product and its' workflow.
-
-Altenrately, we can uniqely identify a DIST-S1 product via the following fields:
+As noted above, each DIST-S1 product is uniquely identified by:
 
 1. MGRS Tile ID
 2. Track Number
 3. Post-image acquisition time (within 1 day)
 
-As shown in [For triggering DIST-S1 Workflows](#for-triggering-dist-s1-workflows) section, that is precisely the output of `enumerate_dist_s1_workflow_inputs`.
-
-We now explain why these fields uniquely identify DIST-S1 products.
-Each DIST-S1 product is resampled to an MGRS tile.
-One might assume that the post-image acquisition time is enough - however, there are particular instances when Sentinel-1 A and Sentinel-1 C will pass each other in the same day and so fixing the track number differentiates between the two sets of acquisired imagery.
-Thus, it is important to specify the date in addition to the track number.
-In theory, we could specify the exact time of acquisition, but we have elected to use track numbers.
+We briefly explain why these fields uniquely identify DIST-S1 products.
+These pieces information uniquely describe the space (MGRS tile and track) and time (post-image acquisition) that a Sentinel-1 makes a pass over a fixed area.
+Each DIST-S1 product is resampled to an MGRS tile, so we need that.
+While the post-image acquisition time is a lot - there are particular instances when Sentinel-1 constellation passes over the same area in a single day and so fixing the track number differentiates between the two different sets of acquired imagery occurring in the same 24 hour period.
+In theory, we could specify the exact time of acquisition, but we have elected to use track numbers to differentiate when there Sentinel-1 constellation collects data over the same area in a single day.
 It is also important to note that we are assuming the selection of pre-images (once a post-image set is selected) is fixed.
-Indeed, varying a baseline of pre-images by which to measure disturbance will alter the final DIST-S1 product.
-Indeed, we can modify strategies of pre-image selection using this library (e.g. `multi_window` vs. `immediate_lookback`), but for DIST-S1 generation which has a fixed strategy with associated parameters, the above 3 fields uniquely identify a DIST-S1 product.
+Although varying a baseline of pre-images to measure disturbance will alter the final DIST-S1 product, we assume with a fixed strategy to construct this baseline, the above 3 fields uniquely identify a DIST-S1 product.
 
 # About the Data Tables in this Library
 
