@@ -174,7 +174,9 @@ df_product_t91.head()
 
 The output is a pandas dataframe so can easily using the pandas API e.g. 
 
-```df_product_t91.to_csv("df_product.csv", index=False)```
+```
+df_product_t91.to_csv("df_product.csv", index=False)
+```
 
 For more details see [Jupyter notebooks](./notebooks).
 
