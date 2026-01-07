@@ -55,6 +55,7 @@ def test_enumerate_dist_s1_workflow_inputs_for_time_series(test_dir: Path) -> No
         stop_acq_dt='2024-04-01',
         lookback_strategy='multi_window',
         delta_lookback_days=365,
+        delta_window_days=60,
         max_pre_imgs_per_burst=5,
         df_ts=df_ts,
     )

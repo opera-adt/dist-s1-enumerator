@@ -68,7 +68,7 @@ def mock_response_from_asf_daac(
             2,
         ),  # multiple MGRS tiles over Los Angeles
         (['01UBT'], None, 'immediate_lookback', 0, 365, 10, 2),  # Aleutian Chain at the antimeridian
-        (['15RXN'], [63], 'multi_window', 365, 365, (5, 5, 5), 1),  # Waxlake delta, VV+VH
+        (['15RXN'], [63], 'multi_window', 365, 60, (5, 5, 5), 1),  # Waxlake delta, VV+VH
     ],
 )
 def test_dist_enum_default_strategies(
@@ -273,6 +273,7 @@ def test_dist_enum_one_with_multi_window_with_multiple_polarizations_and_asf_daa
         # Need to look back further for valid VV+VH data
         delta_lookback_days=(1460, 1095, 730, 365),
         max_pre_imgs_per_burst=(3, 3, 3, 4),
+        delta_window_days=365,
     )
 
     assert sorted(df_product.polarizations.unique().tolist()) == ['HH+HV', 'VV+VH']
@@ -305,6 +306,7 @@ def test_dist_enum_one_with_multi_window_with_asf_daac() -> None:
         lookback_strategy='multi_window',
         delta_lookback_days=(1095, 730, 365),
         max_pre_imgs_per_burst=(3, 3, 4),
+        delta_window_days=365,
     )
     burst_ids_expected = [
         'T144-308024-IW1',
@@ -363,4 +365,5 @@ def test_dist_enum_one_with_multi_window_with_asf_daac_single_polarization() -> 
             lookback_strategy='multi_window',
             delta_lookback_days=(730, 365),
             max_pre_imgs_per_burst=(3, 4),
+            delta_window_days=365,
         )
