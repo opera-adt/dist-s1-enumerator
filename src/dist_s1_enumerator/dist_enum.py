@@ -17,7 +17,7 @@ def enumerate_one_dist_s1_product(
     lookback_strategy: str = 'multi_window',
     post_date_buffer_days: int = 1,
     max_pre_imgs_per_burst: int | list[int] | tuple[int, ...] = (5, 5, 5),
-    delta_window_days: int = 365,
+    delta_window_days: int = 60,
     delta_lookback_days: int | list[int] | tuple[int, ...] = 365,
     min_pre_imgs_per_burst: int = 1,
     tqdm_enabled: bool = True,
@@ -61,7 +61,7 @@ def enumerate_one_dist_s1_product(
             - Expects a single integer, tuples/lists will throw an error.
             - This means the maximum pre-images on prior to the post-date.
     delta_window_days : int, optional
-        The acceptable window of time to search for pre-image RTC-S1 data. Default is 365 days.
+        The acceptable window of time to search for pre-image RTC-S1 data. Default is 60 days (or 2 months).
         This amounts to roughly `post_date - lookback_days - delta_window_days` to `post_date - lookback_days`.
         If lookback strategy is 'multi_window', this means the maximum window of time to search for pre-images on each
         anniversary date where `post_date - n * lookback_days` are the anniversary dates for n = 1,....
@@ -235,7 +235,7 @@ def enumerate_dist_s1_products(
     min_pre_imgs_per_burst: int = 1,
     tqdm_enabled: bool = True,
     delta_lookback_days: int = 365,
-    delta_window_days: int = 365,
+    delta_window_days: int = 60,
 ) -> gpd.GeoDataFrame:
     """
     Enumerate DIST-S1 products from a stack of RTC-S1 metadata and a list of MGRS tiles.
@@ -275,7 +275,7 @@ def enumerate_dist_s1_products(
         anniversary date where `post_date - n * lookback_days` are the anniversary dates for n = 1,....
         If lookback strategy is 'immediate_lookback', this must be set to 0.
     delta_window_days : int, optional
-        The acceptable window of time to search for pre-image RTC-S1 data. Default is 365 days.
+        The acceptable window of time to search for pre-image RTC-S1 data. Default is 60 days (or 2 months).
         This amounts to roughly `post_date - lookback_days - delta_window_days` to `post_date - lookback_days`.
         If lookback strategy is 'multi_window', this means the maximum window of time to search for pre-images on each
         anniversary date where `post_date - n * lookback_days` are the anniversary dates for n = 1,....

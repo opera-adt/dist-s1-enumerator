@@ -273,6 +273,7 @@ def test_dist_enum_one_with_multi_window_with_multiple_polarizations_and_asf_daa
         # Need to look back further for valid VV+VH data
         delta_lookback_days=(1460, 1095, 730, 365),
         max_pre_imgs_per_burst=(3, 3, 3, 4),
+        delta_window_days=365,
     )
 
     assert sorted(df_product.polarizations.unique().tolist()) == ['HH+HV', 'VV+VH']
@@ -305,6 +306,7 @@ def test_dist_enum_one_with_multi_window_with_asf_daac() -> None:
         lookback_strategy='multi_window',
         delta_lookback_days=(1095, 730, 365),
         max_pre_imgs_per_burst=(3, 3, 4),
+        delta_window_days=365,
     )
     burst_ids_expected = [
         'T144-308024-IW1',
@@ -363,4 +365,5 @@ def test_dist_enum_one_with_multi_window_with_asf_daac_single_polarization() -> 
             lookback_strategy='multi_window',
             delta_lookback_days=(730, 365),
             max_pre_imgs_per_burst=(3, 4),
+            delta_window_days=365,
         )
