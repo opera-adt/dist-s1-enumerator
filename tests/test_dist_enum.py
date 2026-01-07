@@ -68,7 +68,7 @@ def mock_response_from_asf_daac(
             2,
         ),  # multiple MGRS tiles over Los Angeles
         (['01UBT'], None, 'immediate_lookback', 0, 365, 10, 2),  # Aleutian Chain at the antimeridian
-        (['15RXN'], [63], 'multi_window', 365, 365, (5, 5, 5), 1),  # Waxlake delta, VV+VH
+        (['15RXN'], [63], 'multi_window', 365, 60, (5, 5, 5), 1),  # Waxlake delta, VV+VH
     ],
 )
 def test_dist_enum_default_strategies(
