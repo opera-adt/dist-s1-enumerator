@@ -8,7 +8,7 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.0.10] - 2026-01-07
 
-### Changed
+### Added
 * Include timestamp (not just date) for enumeration of input of DIST-S1 time series.
 
 
