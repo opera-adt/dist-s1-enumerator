@@ -14,13 +14,14 @@ def update_dist_s1_workflow_dict(data_dict: dict) -> dict:
         {
             key: val
             for (key, val) in data_dict.items()
-            if key in ['mgrs_tile_id', 'acq_date_for_mgrs_pass', 'track_number', 'product_id']
+            if key in ['mgrs_tile_id', 'acq_date_for_mgrs_pass', 'track_number', 'product_id', 'acq_dt']
         }
     )
     out_formatted = {
         'mgrs_tile_id': out['mgrs_tile_id'],
         'post_acq_date': out['acq_date_for_mgrs_pass'],
         'track_number': out['track_number'],
+        'post_acq_timestamp': str(out['acq_dt']),
     }
     return out_formatted
 
@@ -34,7 +35,7 @@ def enumerate_dist_s1_workflow_inputs(
     max_pre_imgs_per_burst: int | list[int] | tuple[int, ...] = (5, 5, 5),
     min_pre_imgs_per_burst: int = 1,
     delta_lookback_days: int | list[int] | tuple[int, ...] = 365,
-    delta_window_days: int = 60,
+    delta_window_days: int = 365,
     df_ts: gpd.GeoDataFrame | None = None,
 ) -> list[dict]:
     """Enumerate the inputs for a DIST-S1 workflow.
