@@ -9,6 +9,12 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [1.0.9] - 2026-01-07
 
 ### Changed
+* Include timestamp for enumeration of time series.
+
+
+## [1.0.9] - 2026-01-07
+
+### Changed
 * Update the delta_window_days from 365 to 60 (i.e. from a year to 2 months). This enforces a baseline to account for some seasonality via its construction.
 
 ## [1.0.8] - 2025-11-10
