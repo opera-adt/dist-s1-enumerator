@@ -135,7 +135,7 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     properties_f = [
         {
             'opera_id': p['sceneName'],
-            'acq_dt': pd.to_datetime(p['startTime']),
+            'acq_dt': pd.Timestamp(p['startTime'], tz='UTC'),
             'track_number': p['pathNumber'],
             'polarizations': p['polarization'],
             'all_urls': [p['url']] + p['additionalUrls'],
