@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.11] - 2026-01-27
+
+### Changed
+* Defaults for max_pre_img per burst set to defaults (4, 3, 3) in enumeration of many products and single product. This aligns with standard inputs for DIST-S1.
+
+### Fixed
+* Casting time strings into timestamps using pandas 2.0+ was attaching precision that was breaking schema validation with different precision (I believe pandas default is nano-second precision and ASF distributes with microsecond precision). Using `coerce=True` for the schema (forcing it to cast into the correct precision) and forcing data to have UTC time-zones fixes this issue with validation.
+
+
 ## [1.0.10] - 2026-01-07
 
 ### Added

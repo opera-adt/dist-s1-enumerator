@@ -76,7 +76,8 @@ Yields:
 <details>
   <summary>Output</summary>
 
-```[{'mgrs_tile_id': '19HBD',
+```
+[{'mgrs_tile_id': '19HBD',
   'post_acq_date': '2023-11-05',
   'track_number': 91,
   'post_acq_timestamp': '2023-11-05 23:36:49+00:00'},

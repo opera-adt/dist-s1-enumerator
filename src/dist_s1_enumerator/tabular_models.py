@@ -27,7 +27,7 @@ rtc_s1_resp_schema = DataFrameSchema(
     {
         'opera_id': Column(str, required=True),
         'jpl_burst_id': Column(str, required=True),
-        'acq_dt': Column(DateTime(tz='UTC'), required=True),
+        'acq_dt': Column(DateTime(tz='UTC'), coerce=True, required=True),
         'acq_date_for_mgrs_pass': Column(str, required=False),
         'polarizations': Column(str, required=True),
         'track_number': Column(int, required=True),

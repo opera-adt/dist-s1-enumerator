@@ -231,7 +231,7 @@ def enumerate_dist_s1_products(
     df_rtc_ts: gpd.GeoDataFrame,
     mgrs_tile_ids: list[str],
     lookback_strategy: str = 'multi_window',
-    max_pre_imgs_per_burst: int = (5, 5, 5),
+    max_pre_imgs_per_burst: int = (4, 3, 3),
     min_pre_imgs_per_burst: int = 1,
     tqdm_enabled: bool = True,
     delta_lookback_days: int = 365,
