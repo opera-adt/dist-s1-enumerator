@@ -32,7 +32,7 @@ def enumerate_dist_s1_workflow_inputs(
     start_acq_dt: datetime | pd.Timestamp | str | None = None,
     stop_acq_dt: datetime | pd.Timestamp | str | None = None,
     lookback_strategy: str = 'multi_window',
-    max_pre_imgs_per_burst: int | list[int] | tuple[int, ...] = (5, 5, 5),
+    max_pre_imgs_per_burst: int | list[int] | tuple[int, ...] = (4, 3, 3),
     min_pre_imgs_per_burst: int = 1,
     delta_lookback_days: int | list[int] | tuple[int, ...] = 365,
     delta_window_days: int = 365,
@@ -60,7 +60,7 @@ def enumerate_dist_s1_workflow_inputs(
         Lookback strategy to use, by default 'multi_window'. Options are
         'immediate_lookback' or 'multi_window'.
     max_pre_imgs_per_burst : int | list[int] | tuple[int, ...], optional
-        Maximum number of pre-images per burst to include, by default 10.
+        Maximum number of pre-images per burst to include, by default (4, 3, 3).
         If lookback strategy is 'multi_window':
             - this is interpreted as the maximum number of pre-images on each anniversary date.
             - tuple/list of integers are provided, each int represents the maximum number of pre-images on each
