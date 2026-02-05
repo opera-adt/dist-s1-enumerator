@@ -34,8 +34,8 @@ def enumerate_dist_s1_workflow_inputs(
     lookback_strategy: str = 'multi_window',
     max_pre_imgs_per_burst: int | list[int] | tuple[int, ...] = (4, 3, 3),
     min_pre_imgs_per_burst: int = 1,
-    delta_lookback_days: int | list[int] | tuple[int, ...] = 365,
-    delta_window_days: int = 365,
+    delta_lookback_days: int | list[int] | tuple[int, ...] = (365, 730, 1095),
+    delta_window_days: int = 60,
     df_ts: gpd.GeoDataFrame | None = None,
 ) -> list[dict]:
     """Enumerate the inputs for a DIST-S1 workflow.
@@ -64,7 +64,9 @@ def enumerate_dist_s1_workflow_inputs(
         If lookback strategy is 'multi_window':
             - this is interpreted as the maximum number of pre-images on each anniversary date.
             - tuple/list of integers are provided, each int represents the maximum number of pre-images on each
-            anniversary date, most recent last.
+            anniversary date. Each integer in tuple should be aligned with `delta_lookback_days`, if latter is a tuple.
+            If `delta_lookback_days` is an integer, then `max_pre_imgs_per_burst` will be interpreted with recent
+            coming first.
             - if a single integer is provided, this is interpreted as the maximum number of pre-images on 3
             anniversary dates.
         If the lookback strategy is 'immediate_lookback':
@@ -73,7 +75,7 @@ def enumerate_dist_s1_workflow_inputs(
     min_pre_imgs_per_burst : int, optional
         Minimum number of pre-images per burst to include, by default 1. This is for *all* the pre-images.
     delta_lookback_days : int | list[int] | tuple[int, ...], optional
-        When to set the most recent pre-image date. Default is 0.
+        When to set the most recent pre-image date. Default is (365, 730, 1095) days.
         If lookback strategy is 'multi_window', this means the maximum number of days to search for pre-images on each
         anniversary date where `post_date - n * lookback_days` are the anniversary dates for n = 1,....
         If lookback strategy is 'immediate_lookback', this must be set to 0.

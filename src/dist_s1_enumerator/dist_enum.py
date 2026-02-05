@@ -16,9 +16,9 @@ def enumerate_one_dist_s1_product(
     post_date: datetime | pd.Timestamp | str,
     lookback_strategy: str = 'multi_window',
     post_date_buffer_days: int = 1,
-    max_pre_imgs_per_burst: int | list[int] | tuple[int, ...] = (5, 5, 5),
+    max_pre_imgs_per_burst: int | list[int] | tuple[int, ...] = (4, 3, 3),
     delta_window_days: int = 60,
-    delta_lookback_days: int | list[int] | tuple[int, ...] = 365,
+    delta_lookback_days: int | list[int] | tuple[int, ...] = (365, 730, 1095),
     min_pre_imgs_per_burst: int = 1,
     tqdm_enabled: bool = True,
 ) -> gpd.GeoDataFrame:
@@ -53,8 +53,9 @@ def enumerate_one_dist_s1_product(
         If lookback strategy is 'multi_window':
             - this is interpreted as the maximum number of pre-images on each anniversary date.
             - tuple/list of integers are provided, each int represents the maximum number of pre-images on each
-            anniversary date,
-            most recent last.
+            anniversary date. Each integer in tuple should be aligned with `delta_lookback_days`, if latter is a tuple.
+            If `delta_lookback_days` is an integer, then `max_pre_imgs_per_burst` will be interpreted with recent
+            coming first.
             - if a single integer is provided, this is interpreted as the maximum number of pre-images on 3
             anniversary dates.
         If the lookback strategy is 'immediate_lookback':
@@ -234,7 +235,7 @@ def enumerate_dist_s1_products(
     max_pre_imgs_per_burst: int = (4, 3, 3),
     min_pre_imgs_per_burst: int = 1,
     tqdm_enabled: bool = True,
-    delta_lookback_days: int = 365,
+    delta_lookback_days: int = (365, 730, 1095),
     delta_window_days: int = 60,
 ) -> gpd.GeoDataFrame:
     """
@@ -259,7 +260,9 @@ def enumerate_dist_s1_products(
         If lookback strategy is 'multi_window':
             - this is interpreted as the maximum number of pre-images on each anniversary date.
             - tuple/list of integers are provided, each int represents the maximum number of pre-images on each
-            anniversary date, most recent last.
+            anniversary date. Each integer in tuple should be aligned with `delta_lookback_days`, if latter is a tuple.
+            If `delta_lookback_days` is an integer, then `max_pre_imgs_per_burst` will be interpreted with recent
+            coming first.
             - if a single integer is provided, this is interpreted as the maximum number of pre-images on 3
             anniversary dates.
         If the lookback strategy is 'immediate_lookback':
@@ -270,7 +273,11 @@ def enumerate_dist_s1_products(
     tqdm_enabled : bool, optional
         Whether to enable tqdm progress bars, by default True.
     delta_lookback_days : int, optional
-        When to set the most recent pre-image date. Default is 365.
+        When to set the most recent pre-image date for a given lookback window in baseline.
+        Default is (365, 730, 1095). Explicitly set to a tuple to ensure proper alignment with `max_pre_imgs_per_burst`
+        and improve readability.
+        See `max_pre_imgs_per_burst` for how this parameter is aligned with that. Specifically, when they are both tuples they
+        should be the same length).
         If lookback strategy is 'multi_window', this means the maximum number of days to search for pre-images on each
         anniversary date where `post_date - n * lookback_days` are the anniversary dates for n = 1,....
         If lookback strategy is 'immediate_lookback', this must be set to 0.
