@@ -322,15 +322,18 @@ Although varying a baseline of pre-images to measure disturbance will alter the 
 
 ### Parameters for Enumeration of RTC-S1 Inputs
 
-We quickly discuss the primary parameters for enumerating the RTC-S1 inputs and provide a picture for the default parameters for clarity particularly for enumerating products.
-The primary paramters we discuss are $\Delta_w$ (`delta_window_days` in library), $\Delta_l$ (`delta_lookback_days` in library), and $m$ (`max_pre_imgs_per_burst` in library).
+We quickly discuss the primary parameters for enumerating the RTC-S1 inputs and provide a picture for the default parameters below.
+The scope of these parameters is relevant for a particular fixed spatial burst and their constraints is applied to each burst independently within a given MGRS tile.
+The paramters we discuss are $\Delta_w$ (`delta_window_days` in library), $\Delta_l$ (`delta_lookback_days` in library), and $m$ (`max_pre_imgs_per_burst` in library).
 These parameters operate on a per-burst curation as noted above.
 The parameter $\Delta_w$ constrains how many days between the anniversary date of a recent post-acquisition date and $\Delta_w$ days before that.
-By default it is set to 60 days.
+By default, this parameter is set to 60 days.
 The parameter $\Delta_l$ explicitly defines the number of anniversary dates and their distance in days from the recent post-acquisition.
 It is by default set to (365, 730, 1095) days, which is 3 anniversary dates at 365 days apart.
-$m$ explicitly says the maximum amount in each window when constructing this baseline and by default it is set to (4, 3, 3).
-So for a post-date acquistion at $t_0$, the maximum number of RTC-S1 products to be used in the time range $[t_0 - 365 - \Delta_w, t_0 - 365]$ is $4$ and the next range $[t_0 - 730 - \Delta_w, t_0 - 730]$ is 3. A visualization of this is shown below.
+$m$ explicitly constrains the maximum amount of granules allowable in each window when constructing this baseline and by default it is set to (4, 3, 3); this parameter is meant to align with $\Delta_l$ (they should have the same length).
+So for a post-date acquistion at $t_0$, the maximum number of RTC-S1 products to be used in the time range $[t_0 - 365 - \Delta_w, t_0 - 365]$ is $4$ and the next range $[t_0 - 730 - \Delta_w, t_0 - 730]$ is 3, etc. 
+A visualization of these parameters (and default values) is shown below.
+Again, these are meant to apply to each burst.
 
 ![params](assets/visualization_of_parameters.png)
 
