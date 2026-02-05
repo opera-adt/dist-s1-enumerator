@@ -276,7 +276,8 @@ def enumerate_dist_s1_products(
         When to set the most recent pre-image date for a given lookback window in baseline.
         Default is (365, 730, 1095). Explicitly set to a tuple to ensure proper alignment with `max_pre_imgs_per_burst`
         and improve readability.
-        See `max_pre_imgs_per_burst` for how this parameter is aligned with that. Specifically, when they are both tuples they
+        See `max_pre_imgs_per_burst` for how this parameter is aligned with that. Specifically, when they are both
+        tuples they should be the same length (i.e. if `delta_lookback_days` is a tuple, then `max_pre_imgs_per_burst`
         should be the same length).
         If lookback strategy is 'multi_window', this means the maximum number of days to search for pre-images on each
         anniversary date where `post_date - n * lookback_days` are the anniversary dates for n = 1,....
