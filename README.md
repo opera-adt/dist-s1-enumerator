@@ -330,7 +330,7 @@ By default it is set to 60 days.
 The parameter $\Delta_l$ explicitly defines the number of anniversary dates and their distance in days from the recent post-acquisition.
 It is by default set to (365, 730, 1095) days, which is 3 anniversary dates at 365 days apart.
 $m$ explicitly says the maximum amount in each window when constructing this baseline and by default it is set to (4, 3, 3).
-So for a post-date acquistion at $t_0$, the maximum number of RTC-S1 products to be used in the time range $[t_0 - 365 - $\Delta_w$, t_0 - 365]$ is $4$ and the next range $[t_0 - 730 - \Delta_w, t_0 - 730]$ is 3. A visualization of this is shown below.
+So for a post-date acquistion at $t_0$, the maximum number of RTC-S1 products to be used in the time range $[t_0 - 365 - \Delta_w, t_0 - 365]$ is $4$ and the next range $[t_0 - 730 - \Delta_w, t_0 - 730]$ is 3. A visualization of this is shown below.
 
 ![params](assets/visualization_of_parameters.png)
 
