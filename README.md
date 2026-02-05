@@ -320,6 +320,21 @@ In theory, we could specify the exact time of acquisition, but we have elected t
 It is also important to note that we are assuming the selection of pre-images (once a post-image set is selected) is fixed.
 Although varying a baseline of pre-images to measure disturbance will alter the final DIST-S1 product, we assume with a fixed strategy to construct this baseline, the above 3 fields uniquely identify a DIST-S1 product.
 
+### Parameters for Enumeration of RTC-S1 Inputs
+
+We quickly discuss the primary parameters for enumerating the RTC-S1 inputs and provide a picture for the default parameters for clarity particularly for enumerating products.
+The primary paramters we discuss are $\Delta_w$ (`delta_window_days` in library), $\Delta_l$ (`delta_lookback_days` in library), and $m$ (`max_pre_imgs_per_burst` in library).
+These parameters operate on a per-burst curation as noted above.
+The parameter $\Delta_w$ constrains how many days between the anniversary date of a recent post-acquisition date and $\Delta_w$ days before that.
+By default it is set to 60 days.
+The parameter $\Delta_l$ explicitly defines the number of anniversary dates and their distance in days from the recent post-acquisition.
+It is by default set to (365, 730, 1095) days, which is 3 anniversary dates at 365 days apart.
+$m$ explicitly says the maximum amount in each window when constructing this baseline and by default it is set to (4, 3, 3).
+So for a post-date acquistion at $t_0$, the maximum number of RTC-S1 products to be used in the time range $[t_0 - 365 - $\Delta_w$, t_0 - 365]$ is $4$ and the next range $[t_0 - 730 - \Delta_w, t_0 - 730]$ is 3. A visualization of this is shown below.
+
+![params](assets/visualization_of_parameters.png)
+
+
 # About the Data Tables in this Library
 
 One of the purposes of this data is to provide easy access via standard lookups to a variety of tables associated with enumerating DIST-S1 products.

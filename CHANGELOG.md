@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.12] - 2026-01-27
+
+### Changed
+* Default for `enumerate_dist_s1_workflow_inputs` parameter `delta_window_days` goes from `365` to `60` as was expected in v1.0.9
+* Explicit tuple for `delta_lookback_days` default to ensure proper alignment with `max_pre_imgs_per_burst` and improve readability (also improved docstring for both)
+
+### Added
+* Discussion of parameters and defaults in README.md
+
 ## [1.0.11] - 2026-01-27
 
 ### Changed
