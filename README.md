@@ -323,7 +323,7 @@ Although varying a baseline of pre-images to measure disturbance will alter the 
 ### Parameters for Enumeration of RTC-S1 Inputs
 
 We quickly discuss the primary parameters for enumerating the RTC-S1 inputs and provide a picture for the default parameters below.
-The scope of these parameters is relevant for a particular fixed spatial burst and their constraints is applied to each burst independently within a given MGRS tile.
+The scope of these parameters is relevant for a particular fixed spatial burst and their constraints are applied to each burst independently within a given MGRS tile.
 The paramters we discuss are $\Delta_w$ (`delta_window_days` in library), $\Delta_l$ (`delta_lookback_days` in library), and $m$ (`max_pre_imgs_per_burst` in library).
 These parameters operate on a per-burst curation as noted above.
 The parameter $\Delta_w$ constrains how many days between the anniversary date of a recent post-acquisition date and $\Delta_w$ days before that.
