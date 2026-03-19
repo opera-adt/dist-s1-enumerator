@@ -169,6 +169,10 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     # First get all the dual-polarizations images
     df_rtc = df_rtc[ind_pol].reset_index(drop=True)
 
+    # Return early if no dual-polarization images found to avoid dtype issues with empty Series
+    if df_rtc.empty:
+        return gpd.GeoDataFrame(columns=rtc_s1_resp_schema.columns.keys())
+
     def get_url_by_polarization(prod_urls: list[str], polarization_token: str) -> list[str]:
         if polarization_token == 'copol':
             polarizations_allowed = ['VV', 'HH']

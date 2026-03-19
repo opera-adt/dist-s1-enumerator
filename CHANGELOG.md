@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.13] - 2026-01-27
+
+### Fixed
+* Pandera validation was failing due to empty slices (object not string) - specifically: tests/test_dist_enum.py::test_dist_enum_one_with_multi_window_with_asf_daac_single_polarization - pandera.errors.SchemaError: expected series...
+  * We returned empty dataframe early to avoid such issues.
+
 ## [1.0.12] - 2026-01-27
 
 ### Changed
