@@ -12,6 +12,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * Pandera validation was failing due to empty slices (object not string) - specifically: tests/test_dist_enum.py::test_dist_enum_one_with_multi_window_with_asf_daac_single_polarization - pandera.errors.SchemaError: expected series...
   * We returned empty dataframe early to avoid such issues.
 
+### Added
+* Citation file
+
 ## [1.0.12] - 2026-01-27
 
 ### Changed
