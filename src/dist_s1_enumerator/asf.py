@@ -12,9 +12,12 @@ from dist_s1_enumerator.mgrs_burst_data import get_burst_ids_in_mgrs_tiles, get_
 from dist_s1_enumerator.tabular_models import reorder_columns, rtc_s1_resp_schema, rtc_s1_schema
 
 
-def convert_asf_url_to_cumulus(url: str) -> str:
+def convert_asf_url_to_cumulus(url: str | None) -> str:
     asf_base = 'https://datapool.asf.alaska.edu/RTC/OPERA-S1/'
     cumulus_base = 'https://cumulus.asf.earthdatacloud.nasa.gov/OPERA/OPERA_L2_RTC-S1/'
+
+    if isinstance(url, (type(None), type(pd.NA))):
+        return ''
 
     if not (url.startswith(cumulus_base) or url.startswith(asf_base)):
         warn(f'URL {url} is not a valid ASF datapool or cumulus earthdatacloud URL.')
@@ -169,6 +172,10 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     # First get all the dual-polarizations images
     df_rtc = df_rtc[ind_pol].reset_index(drop=True)
 
+    # Return early if no dual-polarization images found to avoid dtype issues with empty Series
+    if df_rtc.empty:
+        return gpd.GeoDataFrame(columns=rtc_s1_resp_schema.columns.keys())
+
     def get_url_by_polarization(prod_urls: list[str], polarization_token: str) -> list[str]:
         if polarization_token == 'copol':
             polarizations_allowed = ['VV', 'HH']
@@ -177,20 +184,37 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
         else:
             raise ValueError(f'Invalid polarization token: {polarization_token}. Must be one of: copol, crosspol.')
         possible_urls = [url for pol in polarizations_allowed for url in prod_urls if f'_{pol}.tif' == url[-7:]]
-        if len(possible_urls) == 0:
+        if (len(possible_urls) == 0) and (not include_single_polarization):
             raise ValueError(f'No {polarizations_allowed} urls found')
-        if len(possible_urls) > 1:
+        elif len(possible_urls) > 1:
             raise ValueError(f'Multiple {polarization_token} urls found: {", ".join(possible_urls)}')
-        return possible_urls[0]
+        elif len(possible_urls) == 1:
+            return possible_urls[0]
+        elif include_single_polarization:
+            return None
+        else:
+            raise NotImplementedError('There is an issue parsing return urls from ASF DAAC - should not happen.')
 
     url_copol = df_rtc.all_urls.map(lambda urls_for_prod: get_url_by_polarization(urls_for_prod, 'copol'))
     url_crosspol = df_rtc.all_urls.map(lambda urls_for_prod: get_url_by_polarization(urls_for_prod, 'crosspol'))
 
-    df_rtc['url_copol'] = url_copol
-    df_rtc['url_crosspol'] = url_crosspol
+    # 'string[pyarrow]' is necessary to avoid validation errors with pandera when there are null values
+    df_rtc['url_copol'] = url_copol.astype('string[pyarrow]')
+    df_rtc['url_crosspol'] = url_crosspol.astype('string[pyarrow]')
     df_rtc['url_copol'] = df_rtc['url_copol'].map(convert_asf_url_to_cumulus)
     df_rtc['url_crosspol'] = df_rtc['url_crosspol'].map(convert_asf_url_to_cumulus)
     df_rtc = df_rtc.drop(columns=['all_urls'])
+
+    # Validate urls are non-empty for dual polarization cases
+    copol_missing = df_rtc['url_copol'] == ''
+    crosspol_missing = df_rtc['url_crosspol'] == ''
+    at_least_one_missing_url = copol_missing | crosspol_missing
+    dual_polarization_images = df_rtc['polarizations'].isin(['VV+VH', 'HH+HV'])
+    if ((at_least_one_missing_url) & (dual_polarization_images)).any():
+        raise ValueError('Copol or crosspol urls are missing for rows with dual polarization images.')
+    both_missing = copol_missing & crosspol_missing
+    if (both_missing).any():
+        raise ValueError('Both copol and crosspol urls are missing for some rows.')
 
     # Ensure the data is sorted by jpl_burst_id and acq_dt
     df_rtc = df_rtc.sort_values(by=['jpl_burst_id', 'acq_dt'], ascending=True).reset_index(drop=True)

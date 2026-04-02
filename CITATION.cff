@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Marshak"
+  given-names: "Charlie"
+  affliation: "Jet Propulsion Laboratory"
+- family-names: "Oliver-Cabrera"
+  given-names: "Talib"
+  affliation: "Jet Propulsion Laboratory"
+- family-names: "Jung"
+  given-names: "Jungkyo"
+  affliation: "Jet Propulsion Laboratory"
+- family-names: "West"
+  given-names: "Richard"
+  affliation: "Jet Propulsion Laboratory"
+- name: "OPERA Project Science Team"
+  webite: https://www.jpl.nasa.gov/go/opera/
+title: "dist-s1-enumerator"
+url: "https://github.com/opera-adt/dist-s1-enumerator"

@@ -322,15 +322,18 @@ Although varying a baseline of pre-images to measure disturbance will alter the 
 
 ### Parameters for Enumeration of RTC-S1 Inputs
 
-We quickly discuss the primary parameters for enumerating the RTC-S1 inputs and provide a picture for the default parameters for clarity particularly for enumerating products.
-The primary paramters we discuss are $\Delta_w$ (`delta_window_days` in library), $\Delta_l$ (`delta_lookback_days` in library), and $m$ (`max_pre_imgs_per_burst` in library).
+We quickly discuss the primary parameters for enumerating the RTC-S1 inputs and provide a picture for the default parameters below.
+The scope of these parameters is relevant for a particular fixed spatial burst and their constraints are applied to each burst independently within a given MGRS tile.
+The paramters we discuss are $\Delta_w$ (`delta_window_days` in library), $\Delta_l$ (`delta_lookback_days` in library), and $m$ (`max_pre_imgs_per_burst` in library).
 These parameters operate on a per-burst curation as noted above.
 The parameter $\Delta_w$ constrains how many days between the anniversary date of a recent post-acquisition date and $\Delta_w$ days before that.
-By default it is set to 60 days.
+By default, this parameter is set to 60 days.
 The parameter $\Delta_l$ explicitly defines the number of anniversary dates and their distance in days from the recent post-acquisition.
 It is by default set to (365, 730, 1095) days, which is 3 anniversary dates at 365 days apart.
-$m$ explicitly says the maximum amount in each window when constructing this baseline and by default it is set to (4, 3, 3).
-So for a post-date acquistion at $t_0$, the maximum number of RTC-S1 products to be used in the time range $[t_0 - 365 - \Delta_w, t_0 - 365]$ is $4$ and the next range $[t_0 - 730 - \Delta_w, t_0 - 730]$ is 3. A visualization of this is shown below.
+$m$ explicitly constrains the maximum amount of granules allowable in each window when constructing this baseline and by default it is set to (4, 3, 3); this parameter is meant to align with $\Delta_l$ (they should have the same length).
+So for a post-date acquistion at $t_0$, the maximum number of RTC-S1 products to be used in the time range $[t_0 - 365 - \Delta_w, t_0 - 365]$ is $4$ and the next range $[t_0 - 730 - \Delta_w, t_0 - 730]$ is 3, etc. 
+A visualization of these parameters (and default values) is shown below.
+Again, these are meant to apply to each burst.
 
 ![params](assets/visualization_of_parameters.png)
 
@@ -348,7 +351,7 @@ How these tables were created be found in this [notebook](https://github.com/OPE
 It's worth noting there is some care taken to do the accounting of track numbers within a Sentinel-1 acquisition to properly identify a single data take.
 Sentinel-1 track numbers of products increment near the equator even though they are still within the same pass. 
 Thus, we include the column `acq_group_id_within_mgrs_tile` to identify different data takes within a single MGRS tile.
-We also filter out burst/mgrs pairs if the a Sentinel-1 pass that is smaller than 250 km^2 within the intersection. The MGRS tiles are 3660 x 3660 pixels at 30 meter resolution and so have total area of 12,056 km^2. Thus, this minimum overlap means if a data acquisition over an MGRS tile has less than about 2 percent of total possible data, then we do not need to create a DIST-S1 product for it. Because there is at least 10 km of overlap<sup>*</sup> between adjacent tiles (more at higher latitudes), this minimum coverage requirement means such excluded products will likely be better represented in adjacent MGRS tiles.
+We also filter out burst/mgrs pairs if the a Sentinel-1 pass that is smaller than 100 km^2 within the intersection. The MGRS tiles are 3660 x 3660 pixels at 30 meter resolution and so have total area of 12,056 km^2. Thus, this minimum overlap means if a data acquisition over an MGRS tile has less than about 1 percent of total possible data, then we do not need to create a DIST-S1 product for it. Because there is at least 10 km of overlap<sup>*</sup> between adjacent tiles (more at higher latitudes), this minimum coverage requirement means such excluded products will likely be better represented in adjacent MGRS tiles.
 
 <sup>*</sup>Although there is [documentation](https://hls.gsfc.nasa.gov/products-description/tiling-system/) saying there is 4.9 overlap between tiles, looking at the MGRS tile table above, we see that overlap is closer to 10 km, or 9% of overlap of the area (since the MGRS tiles are about 109 km x 109 km).
 
