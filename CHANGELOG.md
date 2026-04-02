@@ -9,8 +9,10 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [1.0.13] - 2026-01-27
 
 ### Fixed
-* Pandera validation was failing due to empty slices (object not string) - specifically: tests/test_dist_enum.py::test_dist_enum_one_with_multi_window_with_asf_daac_single_polarization - pandera.errors.SchemaError: expected series...
+- Pandera validation was failing due to empty slices (object not string) - specifically: tests/test_dist_enum.py::test_dist_enum_one_with_multi_window_with_asf_daac_single_polarization - pandera.errors.SchemaError: expected series...
   * We returned empty dataframe early to avoid such issues.
+- Fixed errors with single polarization data validation.
+- Fixed errors related to retrieving and formatting single polarization data (not used directly with DIST-S1).
 
 ### Added
 * Citation file
