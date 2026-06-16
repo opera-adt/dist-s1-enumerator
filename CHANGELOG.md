@@ -10,6 +10,8 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 * Use pixi for dependency and virtual environment management.
+* Provide ability to enumerate a single DIST-S1 product specifying only date and MGRS Tile ID
+  * Error is raised if these fields are ambigious (multiple time stamps in day) or invalid (no RTC-S1 data available)
 
 ## [1.0.13] - 2026-01-27
 
