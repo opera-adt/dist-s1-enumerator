@@ -14,10 +14,6 @@ on:
 jobs:
   pytest:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.12']
 
     steps:
       - uses: actions/checkout@v6
@@ -28,19 +24,13 @@ jobs:
           username: ${{ secrets.EARTHDATA_USERNAME }}
           password: ${{ secrets.EARTHDATA_PASSWORD }}
 
-      - uses: mamba-org/setup-micromamba@v3
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          environment-name: dist-s1-enumerator
-          environment-file: environment.yml
-          extra-specs: |
-            python=${{ matrix.python-version }}
-          create-args: |
-            papermill
+          pixi-version: latest
 
-      - name: Pytest Notebook tests in conda environment
-        shell: bash -l {0}
+      - name: Pytest Notebook tests
         run: |
-          mamba install papermill --yes
-          python -m pip install --no-deps .
-          python -m ipykernel install --user --name dist-s1-enumerator
-          pytest . -m 'notebooks'
+          pixi run pip install --no-deps .
+          pixi run pip install papermill
+          pixi run python -m ipykernel install --user --name dist-s1-enumerator
+          pixi run pytest . -m 'notebooks'
