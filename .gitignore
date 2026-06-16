@@ -99,3 +99,6 @@ notebooks/*.parquet
 # out tests
 tests/tmp/
 tests/out/
+# pixi environments
+.pixi/*
+!.pixi/config.toml
