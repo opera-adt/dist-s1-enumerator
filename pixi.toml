@@ -6,6 +6,9 @@ platforms = ["osx-arm64", "linux-64", "osx-64"]
 version = "0.1.0"
 
 [tasks]
+lint = "ruff check src tests"
+format = "ruff format src tests"
+fix = "ruff check --fix src tests"
 
 [dependencies]
 python = ">=3.14.6,<4"
@@ -13,13 +16,8 @@ pip = ">=26.1.2,<27"
 asf_search = ">=12.2.2,<13"
 tenacity = ">=8.2.2,<9"
 contextily = ">=1.7.0,<2"
-flake8 = ">=7.3.0,<8"
-flake8-blind-except = ">=0.2.1,<0.3"
-flake8-builtins = ">=3.1.0,<4"
-flake8-import-order = ">=0.19.2,<0.20"
 geopandas = ">=1.1.3,<2"
 ipykernel = ">=7.3.0,<8"
-isort = ">=8.0.1,<9"
 jupyterlab = ">=4.5.8,<5"
 matplotlib = ">=3.10.9,<4"
 numpy = ">=2.4.6,<3"

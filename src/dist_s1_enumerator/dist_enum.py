@@ -95,11 +95,10 @@ def enumerate_one_dist_s1_product(
     if post_date_buffer_days >= 6:
         raise ValueError('post_date_buffer_days must be less than 6 (S1 pass length) - please check available data')
 
-
     if track_number is None:
-        df_rtc_temp = get_rtc_s1_ts_metadata_from_mgrs_tiles(mgrs_tile_ids=[mgrs_tile_id],
-                                                             start_acq_dt=post_date,
-                                                             stop_acq_dt=post_date + pd.Timedelta(days=1))
+        df_rtc_temp = get_rtc_s1_ts_metadata_from_mgrs_tiles(
+            mgrs_tile_ids=[mgrs_tile_id], start_acq_dt=post_date, stop_acq_dt=post_date + pd.Timedelta(days=1)
+        )
         track_numbers_all = df_rtc_temp.track_number.unique()
         n_tracks = len(track_numbers_all)
         if n_tracks > 2:
@@ -109,8 +108,10 @@ def enumerate_one_dist_s1_product(
         elif n_tracks == 0:
             error = True
         if error:
-            error_msg = (f'No track numbers provided for {post_date}; it is ambiguous/not possible. Track numbers '
-                         f'available: {track_numbers_all}')
+            error_msg = (
+                f'No track numbers provided for {post_date}; it is ambiguous/not possible. Track numbers '
+                f'available: {track_numbers_all}'
+            )
             raise ValueError(error_msg)
         else:
             track_numbers = track_numbers_all
