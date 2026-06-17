@@ -5,7 +5,7 @@ import pandas as pd
 from pandera.pandas import check_input
 from tqdm.auto import tqdm
 
-from dist_s1_enumerator.asf import get_rtc_s1_metadata_from_acq_group
+from dist_s1_enumerator.asf import get_rtc_s1_metadata_from_acq_group, get_rtc_s1_ts_metadata_from_mgrs_tiles
 from dist_s1_enumerator.param_models import LookbackStrategyParams
 from dist_s1_enumerator.tabular_models import dist_s1_input_schema, reorder_columns, rtc_s1_schema
 
@@ -95,12 +95,33 @@ def enumerate_one_dist_s1_product(
     if post_date_buffer_days >= 6:
         raise ValueError('post_date_buffer_days must be less than 6 (S1 pass length) - please check available data')
 
-    if isinstance(track_number, int):
+    if track_number is None:
+        df_rtc_temp = get_rtc_s1_ts_metadata_from_mgrs_tiles(
+            mgrs_tile_ids=[mgrs_tile_id], start_acq_dt=post_date, stop_acq_dt=post_date + pd.Timedelta(days=1)
+        )
+        track_numbers_all = df_rtc_temp.track_number.unique()
+        n_tracks = len(track_numbers_all)
+        if n_tracks > 2:
+            error = True
+        elif n_tracks == 2 and abs(track_numbers_all[0] - track_numbers_all[1]) > 1:
+            error = True
+        elif n_tracks == 0:
+            error = True
+        if error:
+            error_msg = (
+                f'No track numbers provided for {post_date}; it is ambiguous/not possible. Track numbers '
+                f'available: {track_numbers_all}'
+            )
+            raise ValueError(error_msg)
+        else:
+            track_numbers = track_numbers_all
+
+    elif isinstance(track_number, int):
         track_numbers = [track_number]
     elif isinstance(track_number, list):
         track_numbers = track_number
     else:
-        raise TypeError('track_number must be a single integer or a list of integers.')
+        raise TypeError('Track_number must be a single integer or a list of integers if not None.')
 
     if isinstance(mgrs_tile_id, list):
         raise TypeError('mgrs_tile_id must be a single string; we are enumerating inputs for a single DIST-S1 product.')
