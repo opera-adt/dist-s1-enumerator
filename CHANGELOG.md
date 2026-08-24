@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.15] - 2026-08-19
+
+### Fixed
+* `enumerate_dist_s1_products` now removes single polarization records from a caller-supplied `df_rtc_ts`
+  (with a `UserWarning`) rather than trusting the input. DIST-S1 never uses single polarization data, as a
+  post-image or in a baseline. Searches through `dist_s1_enumerator.asf` already dropped it, so only
+  enumeration from an externally assembled RTC-S1 table was affected.
+
+### Changed
+* The dual polarizations DIST-S1 accepts are defined once as `constants.DUAL_POLARIZATIONS` instead of being
+  repeated as literals across `asf.py`.
+
+### Added
+* Tests that a supplied single polarization time series yields no products, that every pre-image of a burst
+  carries the same polarization as that burst's post-image, and that one MGRS tile may mix HH+HV and VV+VH
+  across its bursts without changing which inputs are enumerated.
+
+### Documentation
+* `get_rtc_s1_ts_metadata_by_burst_ids` docstring claimed mixed dual polarization results raise an error.
+  They do not, and must not: a single MGRS tile can hold bursts of either polarization. The baseline/post-image
+  polarization match is enforced per burst in `dist_enum`, never across a tile or a search.
+
 ## [1.0.14] - 2026-01-27
 
 ### Changed

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from warnings import warn
 
 import geopandas as gpd
 import pandas as pd
@@ -6,6 +7,7 @@ from pandera.pandas import check_input
 from tqdm.auto import tqdm
 
 from dist_s1_enumerator.asf import get_rtc_s1_metadata_from_acq_group, get_rtc_s1_ts_metadata_from_mgrs_tiles
+from dist_s1_enumerator.constants import DUAL_POLARIZATIONS
 from dist_s1_enumerator.param_models import LookbackStrategyParams
 from dist_s1_enumerator.tabular_models import dist_s1_input_schema, reorder_columns, rtc_s1_schema
 
@@ -321,6 +323,17 @@ def enumerate_dist_s1_products(
         min_pre_imgs_per_burst=min_pre_imgs_per_burst,
         delta_window_days=delta_window_days,
     )
+
+    # DIST-S1 never uses single polarization data, as a post-image or in a baseline. Searches through
+    # `dist_s1_enumerator.asf` drop it already, but `df_rtc_ts` can be supplied from any source.
+    ind_dual_pol = df_rtc_ts.polarizations.isin(DUAL_POLARIZATIONS)
+    if not ind_dual_pol.all():
+        warn(
+            f'Removing {int((~ind_dual_pol).sum())} RTC-S1 records that are not dual polarization '
+            f'({", ".join(DUAL_POLARIZATIONS)}); DIST-S1 does not use single polarization data.',
+            category=UserWarning,
+        )
+        df_rtc_ts = df_rtc_ts[ind_dual_pol].reset_index(drop=True)
 
     products = []
     product_id = 0

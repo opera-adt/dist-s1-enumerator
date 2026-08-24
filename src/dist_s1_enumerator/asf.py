@@ -8,6 +8,7 @@ from pandera.pandas import check_input
 from rasterio.crs import CRS
 from shapely.geometry import shape
 
+from dist_s1_enumerator.constants import DUAL_POLARIZATIONS
 from dist_s1_enumerator.mgrs_burst_data import get_burst_ids_in_mgrs_tiles, get_lut_by_mgrs_tile_ids
 from dist_s1_enumerator.tabular_models import reorder_columns, rtc_s1_resp_schema, rtc_s1_schema
 
@@ -100,15 +101,17 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
 ) -> gpd.GeoDataFrame:
     """Wrap/format the ASF search API for RTC-S1 metadata search. All searches go through this function.
 
-    Requires search data to be dual polarized data of the same type (if not specified, will get all search results
-    of the available type).
+    Returns dual polarization data only, unless `include_single_polarization` is set; DIST-S1 does not use
+    single polarization data. Pass `polarizations` to restrict the search to one of HH+HV or VV+VH.
 
-    If dual polarized data is mixed (that is there are HH+HV and VV+VH), will raise an error.
+    Mixed dual polarization results (both HH+HV and VV+VH) are returned as-is and are not an error: one MGRS
+    tile can hold bursts of either polarization. Matching a burst's baseline to its own post-image is done
+    per burst downstream in `dist_s1_enumerator.dist_enum`, never by constraining a whole tile or search.
     """
     if isinstance(burst_ids, str):
         burst_ids = [burst_ids]
 
-    if (polarizations is not None) and (polarizations not in ['HH+HV', 'VV+VH']):
+    if (polarizations is not None) and (polarizations not in DUAL_POLARIZATIONS):
         raise ValueError(f'Invalid polarization: {polarizations}. Must be one of: HH+HV, VV+VH, None.')
 
     # Convert all date inputs to datetime objects using pandas for flexibility
@@ -164,9 +167,9 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     if polarizations is not None:
         ind_pol = df_rtc['polarizations'] == polarizations
     elif not include_single_polarization:
-        ind_pol = df_rtc['polarizations'].isin(['HH+HV', 'VV+VH'])
+        ind_pol = df_rtc['polarizations'].isin(DUAL_POLARIZATIONS)
     else:
-        ind_pol = df_rtc['polarizations'].isin(['HH+HV', 'VV+VH', 'HH', 'HV', 'VV', 'VH'])
+        ind_pol = df_rtc['polarizations'].isin([*DUAL_POLARIZATIONS, 'HH', 'HV', 'VV', 'VH'])
     if not ind_pol.any():
         warn(f'No valid dual polarization images found for {burst_ids}.')
     # First get all the dual-polarizations images
@@ -209,7 +212,7 @@ def get_rtc_s1_ts_metadata_by_burst_ids(
     copol_missing = df_rtc['url_copol'] == ''
     crosspol_missing = df_rtc['url_crosspol'] == ''
     at_least_one_missing_url = copol_missing | crosspol_missing
-    dual_polarization_images = df_rtc['polarizations'].isin(['VV+VH', 'HH+HV'])
+    dual_polarization_images = df_rtc['polarizations'].isin(DUAL_POLARIZATIONS)
     if ((at_least_one_missing_url) & (dual_polarization_images)).any():
         raise ValueError('Copol or crosspol urls are missing for rows with dual polarization images.')
     both_missing = copol_missing & crosspol_missing
