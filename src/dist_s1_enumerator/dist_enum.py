@@ -1,11 +1,13 @@
 from datetime import datetime, timedelta
+from warnings import warn
 
 import geopandas as gpd
 import pandas as pd
 from pandera.pandas import check_input
 from tqdm.auto import tqdm
 
-from dist_s1_enumerator.asf import get_rtc_s1_metadata_from_acq_group
+from dist_s1_enumerator.asf import get_rtc_s1_metadata_from_acq_group, get_rtc_s1_ts_metadata_from_mgrs_tiles
+from dist_s1_enumerator.constants import DUAL_POLARIZATIONS
 from dist_s1_enumerator.param_models import LookbackStrategyParams
 from dist_s1_enumerator.tabular_models import dist_s1_input_schema, reorder_columns, rtc_s1_schema
 
@@ -95,12 +97,33 @@ def enumerate_one_dist_s1_product(
     if post_date_buffer_days >= 6:
         raise ValueError('post_date_buffer_days must be less than 6 (S1 pass length) - please check available data')
 
-    if isinstance(track_number, int):
+    if track_number is None:
+        df_rtc_temp = get_rtc_s1_ts_metadata_from_mgrs_tiles(
+            mgrs_tile_ids=[mgrs_tile_id], start_acq_dt=post_date, stop_acq_dt=post_date + pd.Timedelta(days=1)
+        )
+        track_numbers_all = df_rtc_temp.track_number.unique()
+        n_tracks = len(track_numbers_all)
+        if n_tracks > 2:
+            error = True
+        elif n_tracks == 2 and abs(track_numbers_all[0] - track_numbers_all[1]) > 1:
+            error = True
+        elif n_tracks == 0:
+            error = True
+        if error:
+            error_msg = (
+                f'No track numbers provided for {post_date}; it is ambiguous/not possible. Track numbers '
+                f'available: {track_numbers_all}'
+            )
+            raise ValueError(error_msg)
+        else:
+            track_numbers = track_numbers_all
+
+    elif isinstance(track_number, int):
         track_numbers = [track_number]
     elif isinstance(track_number, list):
         track_numbers = track_number
     else:
-        raise TypeError('track_number must be a single integer or a list of integers.')
+        raise TypeError('Track_number must be a single integer or a list of integers if not None.')
 
     if isinstance(mgrs_tile_id, list):
         raise TypeError('mgrs_tile_id must be a single string; we are enumerating inputs for a single DIST-S1 product.')
@@ -300,6 +323,17 @@ def enumerate_dist_s1_products(
         min_pre_imgs_per_burst=min_pre_imgs_per_burst,
         delta_window_days=delta_window_days,
     )
+
+    # DIST-S1 never uses single polarization data, as a post-image or in a baseline. Searches through
+    # `dist_s1_enumerator.asf` drop it already, but `df_rtc_ts` can be supplied from any source.
+    ind_dual_pol = df_rtc_ts.polarizations.isin(DUAL_POLARIZATIONS)
+    if not ind_dual_pol.all():
+        warn(
+            f'Removing {int((~ind_dual_pol).sum())} RTC-S1 records that are not dual polarization '
+            f'({", ".join(DUAL_POLARIZATIONS)}); DIST-S1 does not use single polarization data.',
+            category=UserWarning,
+        )
+        df_rtc_ts = df_rtc_ts[ind_dual_pol].reset_index(drop=True)
 
     products = []
     product_id = 0

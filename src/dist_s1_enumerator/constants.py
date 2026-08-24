@@ -2,6 +2,10 @@
 MAX_BURSTS_IN_MGRS_TILE = 450
 MAX_MGRS_TILES_INTERSECTING_BURST = 8
 
+# DIST-S1 only uses dual polarization RTC-S1 data; a burst's baseline must be the same
+# polarization as its post-image.
+DUAL_POLARIZATIONS = ['VV+VH', 'HH+HV']
+
 
 # Tiles that are in DIST-HLS but not in DIST-S1
 # due to coverage

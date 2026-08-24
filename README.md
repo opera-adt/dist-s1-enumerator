@@ -15,13 +15,32 @@ We use "enumeration" to describe the "curation of required DIST-S1 inputs."
 
 ## Installation/Setup
 
-We recommend managing dependencies and virutal environments using [mamba/conda](https://mamba.readthedocs.io/en/latest/user_guide/installation.html).
+### Mamba
+
+We used mamba to manage virutal environments and dependencies: [mamba/conda](https://mamba.readthedocs.io/en/latest/user_guide/installation.html). However, `pixi` is the more modern approach and will be integrated (see below).
 
 ```bash
 mamba update -f environment.yml  # creates a new environment dist-s1-enumerator
 conda activate dist-s1-enumerator
 pip install dist-s1-enumerator
 python -m ipykernel install --user --name dist-s1-enumerator
+```
+
+### Pixi
+
+Install [pixi](https://pixi.sh/latest/#installation), then:
+
+```bash
+git clone https://github.com/opera-adt/dist-s1-enumerator.git
+cd dist-s1-enumerator
+pixi install
+pixi run python -c "import dist_s1_enumerator"
+```
+
+For JupyterLab:
+
+```bash
+pixi run jupyter lab
 ```
 
 ### Downloading data
