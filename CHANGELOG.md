@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [PEP 440](https://www.python.org/dev/peps/pep-0440/)
 and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.15] - 2026-08-19
+## [1.0.14] - 2026-01-27
 
 ### Fixed
 * `enumerate_dist_s1_products` now removes single polarization records from a caller-supplied `df_rtc_ts`
@@ -15,6 +15,9 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   enumeration from an externally assembled RTC-S1 table was affected.
 
 ### Changed
+* Use pixi for dependency and virtual environment management.
+* Provide ability to enumerate a single DIST-S1 product specifying only date and MGRS Tile ID
+  * Error is raised if these fields are ambigious (multiple time stamps in day) or invalid (no RTC-S1 data available)
 * The dual polarizations DIST-S1 accepts are defined once as `constants.DUAL_POLARIZATIONS` instead of being
   repeated as literals across `asf.py`.
 
@@ -28,12 +31,6 @@ and uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   They do not, and must not: a single MGRS tile can hold bursts of either polarization. The baseline/post-image
   polarization match is enforced per burst in `dist_enum`, never across a tile or a search.
 
-## [1.0.14] - 2026-01-27
-
-### Changed
-* Use pixi for dependency and virtual environment management.
-* Provide ability to enumerate a single DIST-S1 product specifying only date and MGRS Tile ID
-  * Error is raised if these fields are ambigious (multiple time stamps in day) or invalid (no RTC-S1 data available)
 
 ## [1.0.13] - 2026-01-27
 
