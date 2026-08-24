@@ -227,6 +227,117 @@ def test_dist_enum_default_strategies(
         (['15RXN'], [63]),  # Waxlake delta, VV+VH
     ],
 )
+def test_single_polarization_removed_from_supplied_ts(mgrs_tile_ids: list[str], track_numbers: list[int]) -> None:
+    """Single polarization records supplied by the caller are dropped, never used as post- or pre-images."""
+    df_rtc_s1_ts = read_rtc_s1_ts(mgrs_tile_ids, track_numbers=track_numbers)
+
+    df_single_pol = df_rtc_s1_ts.copy()
+    df_single_pol['polarizations'] = 'VV'
+
+    with pytest.warns(UserWarning, match='not dual polarization'):
+        df_products = enumerate_dist_s1_products(
+            df_single_pol,
+            mgrs_tile_ids,
+            lookback_strategy='immediate_lookback',
+            delta_lookback_days=0,
+            delta_window_days=365,
+            max_pre_imgs_per_burst=10,
+            min_pre_imgs_per_burst=2,
+        )
+    assert df_products.empty
+
+
+@pytest.mark.parametrize(
+    'mgrs_tile_ids, track_numbers',
+    [
+        (['15RXN'], [63]),  # Waxlake delta, VV+VH
+    ],
+)
+def test_baseline_polarization_matches_post_image(mgrs_tile_ids: list[str], track_numbers: list[int]) -> None:
+    """Every pre-image of a burst has the same polarization as that burst's post-image."""
+    df_rtc_s1_ts = read_rtc_s1_ts(mgrs_tile_ids, track_numbers=track_numbers)
+
+    # Relabel the oldest half of the time series so both dual polarizations are present per burst
+    df_mixed = df_rtc_s1_ts.sort_values(by='acq_dt').reset_index(drop=True)
+    older = df_mixed.index < len(df_mixed) // 2
+    df_mixed.loc[older, 'polarizations'] = 'HH+HV'
+
+    df_products = enumerate_dist_s1_products(
+        df_mixed,
+        mgrs_tile_ids,
+        lookback_strategy='immediate_lookback',
+        delta_lookback_days=0,
+        delta_window_days=365,
+        max_pre_imgs_per_burst=10,
+        min_pre_imgs_per_burst=1,
+    )
+
+    assert not df_products.empty
+    for product_id in df_products['product_id'].unique():
+        df_product = df_products[df_products['product_id'] == product_id]
+        for burst_id, df_burst in df_product.groupby('jpl_burst_id'):
+            post_pols = df_burst[df_burst.input_category == 'post'].polarizations.unique().tolist()
+            pre_pols = df_burst[df_burst.input_category == 'pre'].polarizations.unique().tolist()
+            assert len(post_pols) == 1, burst_id
+            assert set(pre_pols) <= set(post_pols), burst_id
+
+
+@pytest.mark.parametrize(
+    'mgrs_tile_ids, track_numbers',
+    [
+        (['15RXN'], [63]),  # Waxlake delta, VV+VH
+    ],
+)
+def test_polarizations_may_differ_across_bursts_in_a_tile(mgrs_tile_ids: list[str], track_numbers: list[int]) -> None:
+    """One MGRS tile can mix VV+VH and HH+HV across bursts; only a burst's own baseline is constrained.
+
+    Rare in practice, so the mixed tile is constructed here rather than read from a fixture.
+    """
+    df_rtc_s1_ts = read_rtc_s1_ts(mgrs_tile_ids, track_numbers=track_numbers)
+
+    # Give each burst one polarization for its whole time series, alternating between bursts
+    burst_ids = sorted(df_rtc_s1_ts.jpl_burst_id.unique().tolist())
+    pol_by_burst = {b: ('VV+VH' if i % 2 == 0 else 'HH+HV') for i, b in enumerate(burst_ids)}
+    df_mixed = df_rtc_s1_ts.copy()
+    df_mixed['polarizations'] = df_mixed.jpl_burst_id.map(pol_by_burst)
+
+    df_products = enumerate_dist_s1_products(
+        df_mixed,
+        mgrs_tile_ids,
+        lookback_strategy='immediate_lookback',
+        delta_lookback_days=0,
+        delta_window_days=365,
+        max_pre_imgs_per_burst=10,
+        min_pre_imgs_per_burst=2,
+    )
+
+    # No burst is dropped for carrying the minority polarization, and products keep both
+    df_products_baseline = enumerate_dist_s1_products(
+        df_rtc_s1_ts,
+        mgrs_tile_ids,
+        lookback_strategy='immediate_lookback',
+        delta_lookback_days=0,
+        delta_window_days=365,
+        max_pre_imgs_per_burst=10,
+        min_pre_imgs_per_burst=2,
+    )
+    assert sorted(df_products.jpl_burst_id.unique().tolist()) == sorted(
+        df_products_baseline.jpl_burst_id.unique().tolist()
+    )
+    assert sorted(df_products.opera_id.tolist()) == sorted(df_products_baseline.opera_id.tolist())
+    assert sorted(df_products.polarizations.unique().tolist()) == ['HH+HV', 'VV+VH']
+
+    # Within each burst the baseline still matches the post-image
+    for _, df_burst in df_products.groupby(['product_id', 'jpl_burst_id']):
+        assert df_burst.polarizations.nunique() == 1
+
+
+@pytest.mark.parametrize(
+    'mgrs_tile_ids, track_numbers',
+    [
+        (['15RXN'], [63]),  # Waxlake delta, VV+VH
+    ],
+)
 def test_burst_ids_consistent_between_pre_and_post(mgrs_tile_ids: list[str], track_numbers: list[int] | None) -> None:
     if not isinstance(mgrs_tile_ids, list):
         raise TypeError('mgrs_tile_ids must be a list')
